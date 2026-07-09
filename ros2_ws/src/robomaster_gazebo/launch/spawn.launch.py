@@ -13,10 +13,6 @@ def generate_launch_description():
     xacro_file = os.path.join(desc_pkg, 'urdf', 'robomaster_ep.urdf.xacro')
     robot_description = xacro.process_file(xacro_file).toxml()
 
-    # let Gazebo resolve the package:// mesh URIs
-    resource_path = SetEnvironmentVariable(
-        'IGN_GAZEBO_RESOURCE_PATH', os.path.dirname(desc_pkg))
-
     set_resource_path = AppendEnvironmentVariable(
         name='IGN_GAZEBO_RESOURCE_PATH',
         value='/root/ros2_ws/install/robomaster_description/share'
