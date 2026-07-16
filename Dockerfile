@@ -11,6 +11,4 @@ RUN apt-get update && apt-get install -y \
 
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 
-ENV IGN_GAZEBO_RESOURCE_PATH=/root/ros2_ws/install/robomaster_description/share
-
 WORKDIR /root/ros2_ws

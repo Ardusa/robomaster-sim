@@ -1,0 +1,15 @@
+# Mac (Docker Desktop): no GPU passthrough exists, so no devices/deploy block.
+# host networking is unavailable on Docker Desktop for Mac, so tether cannot
+# rely on network_mode: host — ports must be mapped explicitly.
+services:
+  robomaster-sim:
+    environment:
+      # XQuartz must be running with "Allow connections from network clients"
+      # enabled, and `xhost + 127.0.0.1` run once per session, for rviz/Gazebo GUI.
+      - DISPLAY=host.docker.internal:0
+      - IGN_GAZEBO_RESOURCE_PATH=/root/ros2_ws/install/robomaster_description/share
+    # Finalize these once the DJI WiFi driver's UDP ports are known.
+    # The RoboMaster EP SDK uses a plaintext control port; map it here so the
+    # container can reach the robot over Docker Desktop's NAT.
+    # ports:
+    #   - "40923:40923/udp"

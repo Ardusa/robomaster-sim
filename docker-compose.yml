@@ -1,25 +1,7 @@
 services:
   robomaster-sim:
     build: .
-    network_mode: host
     stdin_open: true
     tty: true
-    environment:
-      - DISPLAY=:0
-      - WAYLAND_DISPLAY=wayland-0
-      - XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
-      - NVIDIA_DRIVER_CAPABILITIES=all
-      - LD_LIBRARY_PATH=/usr/lib/wsl/lib
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - /mnt/wslg:/mnt/wslg
-      - /usr/lib/wsl:/usr/lib/wsl
       - ./ros2_ws:/root/ros2_ws
-    devices:
-      - /dev/dxg
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [gpu]

@@ -1,35 +1,34 @@
+"""Simulation backend: shared bringup + Gazebo + spawn.
+
+Includes bringup.launch.py (rsp/TF), then adds the sim-only pieces:
+the Gazebo resource path, the Gazebo server/GUI, and spawning the robot
+from the robot_description topic.
+"""
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import (AppendEnvironmentVariable, IncludeLaunchDescription, TimerAction,
-                            SetEnvironmentVariable)
+from launch.actions import (AppendEnvironmentVariable, IncludeLaunchDescription,
+                            TimerAction)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
-import xacro
 
 
 def generate_launch_description():
-    desc_pkg = get_package_share_directory('robomaster_description')
-    xacro_file = os.path.join(desc_pkg, 'urdf', 'robomaster_ep.urdf.xacro')
-    robot_description = xacro.process_file(xacro_file).toxml()
+    gz_pkg = get_package_share_directory('robomaster_gazebo')
+    ros_gz_sim = get_package_share_directory('ros_gz_sim')
+
+    bringup = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(gz_pkg, 'launch', 'bringup.launch.py')))
 
     set_resource_path = AppendEnvironmentVariable(
         name='IGN_GAZEBO_RESOURCE_PATH',
-        value='/root/ros2_ws/install/robomaster_description/share'
-    )
+        value='/root/ros2_ws/install/robomaster_description/share')
 
-    ros_gz_sim = get_package_share_directory('ros_gz_sim')
     gz = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(ros_gz_sim, 'launch', 'gz_sim.launch.py')),
         launch_arguments={'gz_args': '-r --render-engine ogre empty.sdf'}.items(),
-    )
-
-    rsp = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        output='screen',
-        parameters=[{'robot_description': robot_description}],
     )
 
     spawn = Node(
@@ -42,7 +41,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         set_resource_path,
+        bringup,
         gz,
-        rsp,
         TimerAction(period=4.0, actions=[spawn]),  # let Gazebo come up first
     ])
