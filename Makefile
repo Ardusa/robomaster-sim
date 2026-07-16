@@ -3,19 +3,6 @@
 #   WSL2   : base + wsl2  (GPU + WSLg display, full Gazebo)
 #   Mac    : base + mac   (no GPU, XQuartz display, port-mapped networking)
 #   Linux  : base only
-#
-# GUI targets (rviz/Gazebo/ffplay) draw on the host, not in the container: the
-# container is the X client, the host runs the X server. All the client-side
-# wiring is env in the compose overrides - see docker-compose.mac.yml.
-#
-# Mac only, one-time host setup (WSLg and native Linux need none):
-#     brew install --cask xquartz
-#     defaults write org.xquartz.X11 nolisten_tcp -bool false  # listen on :0
-#     defaults write org.xquartz.X11 no_auth      -bool true   # trust the NAT
-#     defaults write org.xquartz.X11 enable_iglx  -bool true   # indirect GLX
-# then start XQuartz (it must be running for any GUI target). These persist,
-# so this is a once-per-machine thing, not a per-run step. Without the first
-# two, ffplay dies with "Could not initialize SDL - No available video device".
 # ---------------------------------------------------------------------------
 UNAME_S := $(shell uname -s)
 IS_WSL  := $(shell grep -qi microsoft /proc/version 2>/dev/null && echo 1)
@@ -26,6 +13,9 @@ ifeq ($(IS_WSL),1)
 else ifeq ($(UNAME_S),Darwin)
   PLATFORM      := mac
   COMPOSE_FILES := -f docker-compose.yml -f docker-compose.mac.yml
+  X11 := $(shell defaults write org.xquartz.X11 nolisten_tcp -bool false; \
+                 defaults write org.xquartz.X11 no_auth -bool true; \
+                 pgrep -x Xquartz >/dev/null || { open -a XQuartz; sleep 3; })
 else
   PLATFORM      := linux
   COMPOSE_FILES := -f docker-compose.yml
