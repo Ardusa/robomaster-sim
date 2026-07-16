@@ -23,7 +23,15 @@
 #include "robomaster_driver/tcp_client.hpp"
 
 int main(int  /*argc*/, char ** /*argv*/) {
-  std::string robot_ip = std::getenv("ROBOMASTER_IP");
+  // Not std::string x = std::getenv(...): that's UB (a segfault, not an error)
+  // when the var is unset, which is exactly when you'd be running this.
+  const char *ip_env = std::getenv("ROBOMASTER_IP");
+  if (ip_env == nullptr || *ip_env == '\0') {
+    std::cerr << "ROBOMASTER_IP is not set. Set it in .env (direct-connect AP "
+                 "mode is usually 192.168.2.1).\n";
+    return 2;
+  }
+  const std::string robot_ip = ip_env;
 
   std::cout << "RoboMaster EP connection test\n";
   std::cout << "  target: " << robot_ip << ":40923\n";
@@ -44,10 +52,24 @@ int main(int  /*argc*/, char ** /*argv*/) {
   }
   std::cout << "ok\n";
 
+  // Retried, and with a longer timeout than the 1s default: this is the first
+  // command that has to round-trip past the SDK layer to the chassis, and it
+  // intermittently overruns 1s - especially right after a reconnect, while the
+  // robot is still tearing down a previous session (it allows one client, so a
+  // container restart can leave it briefly busy). A false FAILED here sends you
+  // hunting a network problem that isn't there.
   std::cout << "[2/4] querying battery level... ";
   std::string response;
-  if (!client.send_command("robot battery ?", response)) {
+  bool battery_ok = client.send_command("robot battery ?", response, 3000);
+  if (!battery_ok) {
+    std::cout << "no response, retrying... ";
+    battery_ok = client.send_command("robot battery ?", response, 3000);
+  }
+  if (!battery_ok) {
     std::cout << "FAILED (no response)\n";
+    std::cout << "\nSDK mode was entered but the robot never answered. If you "
+                 "just restarted\nthe container, wait a few seconds for the old "
+                 "session to drop and retry.\n";
     return 1;
   }
   std::cout << response << "%\n";

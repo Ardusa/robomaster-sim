@@ -86,9 +86,11 @@ void TcpClient::disconnect() {
   if (socket_fd_ < 0) {
     return;
   }
-  std::string unused;
-  // Best-effort: don't care if this fails, we're closing regardless.
-  send_command("quit", unused, /*timeout_ms=*/200);
+  // Fire-and-forget, not send_command: we're closing the socket regardless, so
+  // waiting on a reply only buys a guaranteed timeout and a red ERROR line that
+  // makes a clean shutdown look like a failure. The robot drops SDK mode when
+  // the connection closes anyway; "quit" is just the polite version.
+  send_fire_and_forget("quit");
   close(socket_fd_);
   socket_fd_ = -1;
 }

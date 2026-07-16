@@ -27,6 +27,19 @@ from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
+def _sim_default() -> str:
+    """SIM from the environment, so this is runnable standalone.
+
+    bringup.launch.py passes sim:= explicitly; when it doesn't (you ran this on
+    its own), fall back to the same env var rather than guessing a backend. Only
+    use_sim_time depends on it, so an unset SIM is a warning, not a hard failure
+    like it is in bringup — detection still works either way, the clock is just
+    wrong.
+    """
+    value = os.environ.get("SIM", "").strip().lower()
+    return value if value in ("true", "false") else "false"
+
+
 def generate_launch_description():
     pkg = get_package_share_directory("robomaster_detection")
     tags_config = os.path.join(pkg, "config", "tags_36h11.yaml")
@@ -73,7 +86,12 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            DeclareLaunchArgument("sim", default_value="false", choices=["true", "false"]),
+            DeclareLaunchArgument(
+                "sim",
+                default_value=_sim_default(),
+                choices=["true", "false"],
+                description="Defaults to $SIM. Only affects use_sim_time.",
+            ),
             rectify,
             apriltag,
             overlay,

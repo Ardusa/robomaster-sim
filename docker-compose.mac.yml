@@ -1,12 +1,16 @@
 # Mac (Docker Desktop): no GPU passthrough exists, so no devices/deploy block.
 # host networking is unavailable on Docker Desktop for Mac, so tether cannot
 # rely on network_mode: host — ports must be mapped explicitly.
+#
+# No DISPLAY / X11 here on purpose. XQuartz could never render this stack (GL
+# has no working driver inside the emulated x86 image — rqt died on swrast),
+# so the GUI path is gone entirely: video is served over HTTP on :8080 and
+# watched in a browser, and Gazebo always runs headless. Nothing to configure,
+# and it behaves the same on any host.
 services:
   robomaster-sim:
     environment:
-      - DISPLAY=host.docker.internal:0
-      - SDL_RENDER_DRIVER=software
-      - SDL_FRAMEBUFFER_ACCELERATION=0
+      # Still needed headless: Gazebo renders camera sensors offscreen.
       - LIBGL_ALWAYS_SOFTWARE=1
       - IGN_GAZEBO_RESOURCE_PATH=/root/ros2_ws/install/robomaster_description/share
     # RoboMaster EP plaintext SDK ports, confirmed against DJI's official
@@ -25,6 +29,8 @@ services:
     # rest are uncommented here for when video/telemetry get wired in —
     # trim to just 40923 if you want a smaller attack surface until then.
     ports:
+      # web_video_server — the only way video reaches you on this host.
+      - "8080:8080/tcp"
       - "40923:40923/tcp"
       - "40924:40924/tcp"
       - "40925:40925/tcp"
