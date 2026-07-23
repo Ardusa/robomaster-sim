@@ -9,6 +9,7 @@
 # and it behaves the same on any host.
 services:
   robomaster-sim:
+    platform: linux/amd64
     environment:
       # Still needed headless: Gazebo renders camera sensors offscreen.
       - LIBGL_ALWAYS_SOFTWARE=1
