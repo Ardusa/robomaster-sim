@@ -1,6 +1,6 @@
-# WSL2-only: DirectX GPU shim, WSLg display forwarding, NVIDIA runtime.
-# None of these paths/devices exist off WSL2 — that's why they live here,
-# not in the base file.
+# WSL2-only: WSLg display forwarding and WSL-specific mounts.
+# GPU acceleration is best-effort here; do not force a GPU reservation so the
+# stack can still start on WSL2 systems without an exposed adapter.
 services:
   robomaster-sim:
     network_mode: host
@@ -8,18 +8,9 @@ services:
       - DISPLAY=:0
       - WAYLAND_DISPLAY=wayland-0
       - XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
-      - NVIDIA_DRIVER_CAPABILITIES=all
       - LD_LIBRARY_PATH=/usr/lib/wsl/lib
       - IGN_GAZEBO_RESOURCE_PATH=/root/ros2_ws/install/robomaster_description/share
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /mnt/wslg:/mnt/wslg
       - /usr/lib/wsl:/usr/lib/wsl
-    devices:
-      - /dev/dxg
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [gpu]

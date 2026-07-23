@@ -27,6 +27,8 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     ros_gz_sim = get_package_share_directory("ros_gz_sim")
+    gazebo_share = get_package_share_directory("robomaster_gazebo")
+    description_share = get_package_share_directory("robomaster_description")
 
     # headless:=true runs the server with no GUI, which is the only way this is
     # bearable without GPU passthrough (see the Makefile's platform warning).
@@ -36,7 +38,9 @@ def generate_launch_description():
         launch_arguments={
             "gz_args": PythonExpression(
                 [
-                    "'-r --render-engine ogre empty.sdf' + ",
+                    "'-r --render-engine ogre ' + '",
+                    LaunchConfiguration("world"),
+                    "' + ",
                     "(' -s --headless-rendering' if '",
                     LaunchConfiguration("headless"),
                     "' == 'true' else '')",
@@ -81,11 +85,16 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument("headless", default_value="false", choices=["true", "false"]),
+            DeclareLaunchArgument(
+                "world",
+                default_value=os.path.join(gazebo_share, "worlds", "small_house.world"),
+                description="Gazebo world file.",
+            ),
             # Accepted and ignored: bringup passes sim to every include.
             DeclareLaunchArgument("sim", default_value="true", choices=["true", "false"]),
             AppendEnvironmentVariable(
                 name="IGN_GAZEBO_RESOURCE_PATH",
-                value="/root/ros2_ws/install/robomaster_description/share",
+                value=os.pathsep.join([description_share, gazebo_share]),
             ),
             gz,
             clock_bridge,

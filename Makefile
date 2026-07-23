@@ -11,24 +11,34 @@
 # WSL2 keeps its display: WSLg works, and it's the only place the Gazebo GUI is
 # actually usable.
 # ---------------------------------------------------------------------------
-UNAME_S := $(shell uname -s)
-IS_WSL  := $(shell grep -qi microsoft /proc/version 2>/dev/null && echo 1)
-
-ifeq ($(IS_WSL),1)
-  PLATFORM      := wsl2
-  COMPOSE_FILES := -f docker-compose.yml -f docker-compose.wsl2.yml
-else ifeq ($(UNAME_S),Darwin)
-  PLATFORM      := mac
-  COMPOSE_FILES := -f docker-compose.yml -f docker-compose.mac.yml
-  # Not a choice on Mac: there's no display to render into.
-  HEADLESS := 1
+ifeq ($(OS),Windows_NT)
+	UNAME_S :=
+	IS_WSL  :=
 else
-  PLATFORM      := linux
-  COMPOSE_FILES := -f docker-compose.yml
+	UNAME_S := $(shell uname -s)
+	IS_WSL  := $(shell grep -qi microsoft /proc/version 2>/dev/null && echo 1)
+endif
+
+ifeq ($(OS),Windows_NT)
+	PLATFORM      := windows
+	COMPOSE_FILES := -f docker-compose.yml
+	HEADLESS := 1
+else ifeq ($(IS_WSL),1)
+	PLATFORM      := wsl2
+	COMPOSE_FILES := -f docker-compose.yml -f docker-compose.wsl2.yml
+else ifeq ($(UNAME_S),Darwin)
+	PLATFORM      := mac
+	COMPOSE_FILES := -f docker-compose.yml -f docker-compose.mac.yml
+	# Not a choice on Mac: there's no display to render into.
+	HEADLESS := 1
+else
+	PLATFORM      := linux
+	COMPOSE_FILES := -f docker-compose.yml
 endif
 
 DC   := docker compose $(COMPOSE_FILES)
 EXEC := $(DC) exec robomaster-sim bash -c
+BRINGUP_CLEANUP := $(DC) exec -T robomaster-sim bash -lc "pkill -f '[r]os2 launch robomaster_bringup bringup.launch.py' || true; pkill -f '[w]eb_video_server' || true; pkill -f '[c]md_vel_mux.py' || true; pkill -f '[a]priltag_node' || true; pkill -f '[t]ag_overlay_node' || true; pkill -f '[r]ectify_node' || true; pkill -f '[r]os_gz_sim create' || true; pkill -f '[i]gn gazebo' || true"
 
 # Video goes to the browser, not an X11 window — see bringup-camera.
 RAW_URL  := http://localhost:8080/stream?topic=/camera/image_raw
@@ -37,6 +47,10 @@ ifeq ($(UNAME_S),Darwin)
   OPEN := open
 else
   OPEN := xdg-open
+endif
+
+ifeq ($(OS),Windows_NT)
+	OPEN := start
 endif
 SETUP := source /opt/ros/humble/setup.bash && cd /root/ros2_ws && [ -f install/setup.bash ] && source install/setup.bash;
 
@@ -96,6 +110,7 @@ bringup: build ## Everything: drivetrain + camera + detection
 ifneq ($(IS_WSL),1)
 	@echo "NOTE: no GPU passthrough on '$(PLATFORM)'. If SIM=true, expect Gazebo to be slow."
 endif
+	@$(BRINGUP_CLEANUP)
 	@echo "  camera: $(RAW_URL)"
 	@echo "  tags:   $(TAGS_URL)"
 	@echo "  drive:  make shell, then: ros2 run teleop_twist_keyboard \\"
