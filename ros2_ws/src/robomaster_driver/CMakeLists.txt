@@ -57,7 +57,7 @@ install(DIRECTORY include/ DESTINATION include)
 install(FILES robomaster_driver.xml DESTINATION share/${PROJECT_NAME})
 # No urdf/ here: the <ros2_control> block for this hardware plugin lives in
 # robomaster_description (it names the plugin by string, so no dep is needed).
-# No config/ either: the controller yamls live in robomaster_bringup, next to
+# No config/ either: the controller yamls live in robomaster_drivetrain, next to
 # the sim's, since both backends load the same controllers.
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 

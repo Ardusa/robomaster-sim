@@ -40,9 +40,9 @@ def _nodes(context, *args, **kwargs):
     actions = []
 
     if control:
-        # Params passed down by bringup rather than $(find robomaster_bringup)'d
-        # here: bringup includes this file, so reaching back into it would make
-        # the two packages depend on each other.
+        # Params passed down by bringup rather than $(find ...)'d here: the YAML
+        # lives in robomaster_drivetrain; bringup resolves that path so this
+        # package neither depends on bringup nor on drivetrain for a find.
         actions.append(
             Node(
                 package="controller_manager",
@@ -71,7 +71,10 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "controllers_file",
                 default_value="",
-                description="controller_manager params (bringup owns it).",
+                description=(
+                    "controller_manager params from robomaster_drivetrain; "
+                    "bringup passes the path."
+                ),
             ),
             DeclareLaunchArgument("control", default_value="true", choices=["true", "false"]),
             DeclareLaunchArgument("camera", default_value="true", choices=["true", "false"]),

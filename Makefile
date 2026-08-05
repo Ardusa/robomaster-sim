@@ -115,8 +115,7 @@ endif
 	@$(BRINGUP_CLEANUP)
 	@echo "  camera: $(RAW_URL)"
 	@echo "  tags:   $(TAGS_URL)"
-	@echo "  drive:  make shell, then: ros2 run teleop_twist_keyboard \\"
-	@echo "          teleop_twist_keyboard --ros-args -r /cmd_vel:=/cmd_vel_teleop"
+	@echo "  drive:  make shell, then: ros2 launch robomaster_teleop teleop.launch.py"
 	$(EXEC) "$(SETUP) $(LAUNCH)"
 
 # Self-contained: brings up the drivetrain in the background (no camera, no
@@ -142,8 +141,7 @@ bringup-teleop: build ## Drivetrain only, then drive it with the keyboard
 	       $(DC) exec -T robomaster-sim tail -20 /tmp/teleop_stack.log; exit 1; }
 	@echo "  ready — keys below actually drive it now."
 	-$(DC) exec robomaster-sim bash -c "$(SETUP) \
-	  ros2 run teleop_twist_keyboard teleop_twist_keyboard \
-	  --ros-args -r /cmd_vel:=/cmd_vel_teleop"
+	  ros2 launch robomaster_teleop teleop.launch.py"
 	@# [c] so pkill doesn't match this very command line and SIGTERM its own
 	@# shell (that's what the stray "Error 143" was). Matches only the stack
 	@# started above, never a bringup you have running elsewhere.

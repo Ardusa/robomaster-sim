@@ -1,11 +1,11 @@
-"""The entry point. Brings up the robot on whichever backend SIM selects.
+"""The entry point. Composes subsystems; does not implement them.
 
     SIM=true   -> Gazebo + gz_ros2_control
     SIM=false  -> the physical EP over its plaintext SDK
 
-Either way you get the same TF tree, the same mecanum controller, the same
-/cmd_vel_teleop and /cmd_vel_autonomy inputs, and the same AprilTag topics. The
-backend is the only thing that changes.
+Either way you get the same TF tree, the same mecanum controller (via
+robomaster_drivetrain), the same /cmd_vel_teleop and /cmd_vel_autonomy inputs,
+and the same AprilTag topics. The backend is the only thing that changes.
 
 The control/camera/detection args exist so a subsystem can be brought up on its
 own, which is what the make targets use to test one thing at a time:
@@ -17,7 +17,7 @@ own, which is what the make targets use to test one thing at a time:
 
 Keyboard teleop is deliberately NOT a node here: teleop_twist_keyboard reads raw
 stdin, and a launch child process has no terminal, so it would capture no keys.
-It has to run in its own foreground shell — see the Makefile.
+Run robomaster_teleop in its own foreground shell — see the Makefile.
 
 SIM is read from the environment (set it in .env) and has no default: an unset
 or misspelled value fails here, naming itself, rather than silently booting the
@@ -53,7 +53,7 @@ def _sim_from_env() -> str:
 
 def _backends(context, *args, **kwargs):
     sim = _sim_from_env()
-    bringup_pkg = get_package_share_directory("robomaster_bringup")
+    drivetrain_pkg = get_package_share_directory("robomaster_drivetrain")
 
     def flag(name):
         return LaunchConfiguration(name).perform(context) == "true"
@@ -72,7 +72,7 @@ def _backends(context, *args, **kwargs):
     actions = [include("robomaster_bringup", "description.launch.py")]
 
     if control:
-        actions.append(include("robomaster_bringup", "control.launch.py"))
+        actions.append(include("robomaster_drivetrain", "control.launch.py"))
 
     if sim == "true":
         # Gazebo is the sim's camera *and* its physics, so it comes up either
@@ -85,13 +85,17 @@ def _backends(context, *args, **kwargs):
             sim_args["world"] = world
         actions.append(include("robomaster_gazebo", "sim.launch.py", **sim_args))
     else:
+        # Path injected here so driver does not find bringup (or cycle).
+        # Controllers YAML is owned by drivetrain.
         actions.append(
             include(
                 "robomaster_driver",
                 "tether.launch.py",
                 control=str(control).lower(),
                 camera=str(camera).lower(),
-                controllers_file=os.path.join(bringup_pkg, "config", "tether_controllers.yaml"),
+                controllers_file=os.path.join(
+                    drivetrain_pkg, "config", "tether_controllers.yaml"
+                ),
             )
         )
 
@@ -122,7 +126,7 @@ def generate_launch_description():
                 "control",
                 default_value="true",
                 choices=["true", "false"],
-                description="Drivetrain: controllers + twist mux.",
+                description="Include robomaster_drivetrain (controllers + twist mux).",
             ),
             DeclareLaunchArgument(
                 "camera",

@@ -3,23 +3,23 @@
 <package format="3">
     <name>robomaster_bringup</name>
     <version>0.0.1</version>
-    <description>Backend-agnostic bringup and control layer for the RoboMaster EP.
+    <description>Composition-only entry point for the RoboMaster EP.
 
-        Owns everything both backends share: robot_state_publisher, the controller
-        spawners, twist arbitration, and both controller configs. robomaster_gazebo
-        and robomaster_driver each depend on this and not on each other, so the
-        real-robot path no longer pulls in a simulation package to find shared
-        launch files.</description>
+        Starts description plus whichever subsystems you ask for: drivetrain,
+        camera, detection, and exactly one backend (gazebo or driver). Does not
+        implement motion, muxing, or teleop — those live in robomaster_drivetrain
+        and robomaster_teleop.
+    </description>
     <maintainer email="ardusa05@gmail.com">Ankur</maintainer>
     <license>MIT</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
-    <buildtool_depend>ament_cmake_python</buildtool_depend>
 
     <!-- bringup.launch.py includes whichever backend SIM names, so it depends on
-         both. The backends depend on this for the shared layers, but not on each
-         other, and none of them reach across the sim/real split. -->
+         both. The backends do not depend on each other. -->
     <exec_depend>robomaster_description</exec_depend>
+    <exec_depend>robomaster_drivetrain</exec_depend>
+    <exec_depend>robomaster_teleop</exec_depend>
     <exec_depend>robomaster_gazebo</exec_depend>
     <exec_depend>robomaster_driver</exec_depend>
     <exec_depend>robomaster_camera</exec_depend>
@@ -28,12 +28,7 @@
     <exec_depend>launch_ros</exec_depend>
     <exec_depend>robot_state_publisher</exec_depend>
     <exec_depend>joint_state_publisher</exec_depend>
-    <exec_depend>controller_manager</exec_depend>
-    <exec_depend>mecanum_drive_controller</exec_depend>
-    <exec_depend>joint_state_broadcaster</exec_depend>
     <exec_depend>web_video_server</exec_depend>
-    <exec_depend>rclpy</exec_depend>
-    <exec_depend>geometry_msgs</exec_depend>
     <exec_depend>xacro</exec_depend>
 
     <test_depend>ament_lint_auto</test_depend>
