@@ -1,7 +1,5 @@
 services:
   robomaster-sim:
-    ports:
-      - "8080:8080/tcp"
     environment:
       - DISPLAY=:0
       - WAYLAND_DISPLAY=wayland-0

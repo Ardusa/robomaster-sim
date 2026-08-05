@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     # Video is watched in a browser (web_video_server), not an X11 GUI — no rqt.
     ros-humble-web-video-server \
     python3-colcon-common-extensions \
+    python3-aiohttp \
     python3-av \
     python3-opencv \
     ffmpeg \

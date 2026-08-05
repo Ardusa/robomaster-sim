@@ -7,12 +7,12 @@ Either way you get the same TF tree and the same subsystem interfaces. Gazebo
 or tether is always the foundational backend when SIM is set — not a separate
 debug target.
 
-    make bringup             # full stack + teleop in the foreground (Makefile)
-    make bringup-teleop      # drivetrain + arm + teleop
+    make bringup             # full stack + web dashboard
+    make bringup-teleop      # drivetrain + arm + keyboard teleop fallback
     make bringup-detection   # camera + detection
 
-Keyboard teleop is deliberately NOT a node here: it needs a real TTY. The
-Makefile runs it in the foreground after this launch comes up detached.
+Keyboard teleop is deliberately NOT a node here: it needs a real TTY.
+bringup-teleop runs it in the foreground; full bringup uses the dashboard.
 
 SIM is read from the environment (set it in .env) and has no default.
 """
@@ -25,6 +25,17 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Opaq
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+
+def _headless_default() -> str:
+    """Headless unless GUI=true in .env — the dashboard is the normal viewport.
+
+    Same pattern as SIM/WORLD: session preference lives in .env, launch
+    headless:= still overrides for one-offs. The Makefile forces headless:=true
+    on hosts with no display path (Mac, Windows) regardless of this.
+    """
+    gui = os.environ.get("GUI", "").strip().lower()
+    return "false" if gui == "true" else "true"
 
 
 def _sim_from_env() -> str:
@@ -51,6 +62,7 @@ def _backends(context, *args, **kwargs):
     camera = flag("camera")
     detection = flag("detection")
     arm = flag("arm")
+    dashboard = flag("dashboard")
 
     # Detection needs a feed; on the real robot that means the camera node.
     if detection and sim == "false":
@@ -97,20 +109,21 @@ def _backends(context, *args, **kwargs):
     if detection:
         actions.append(include("robomaster_detection", "detection.launch.py"))
 
-    if flag("video_server") and (camera or detection or sim == "true"):
-        # On SIM=true the Gazebo camera exists even if camera:=false was passed
-        # for a teleop-only stack — only serve video when the user asked for
-        # vision (camera/detection) so bringup-teleop stays quiet on :8080.
-        if camera or detection:
-            actions.append(
-                Node(
-                    package="web_video_server",
-                    executable="web_video_server",
-                    name="web_video_server",
-                    output="screen",
-                    parameters=[{"port": 8080, "use_sim_time": sim == "true"}],
-                )
+    want_video = flag("video_server") and (camera or detection or dashboard)
+    if want_video:
+        # bringup-teleop stays quiet on :8080; dashboard needs MJPEG streams.
+        actions.append(
+            Node(
+                package="web_video_server",
+                executable="web_video_server",
+                name="web_video_server",
+                output="screen",
+                parameters=[{"port": 8080, "use_sim_time": sim == "true"}],
             )
+        )
+
+    if dashboard:
+        actions.append(include("robomaster_dashboard", "dashboard.launch.py"))
 
     return actions
 
@@ -144,9 +157,12 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "headless",
-                default_value="false",
+                default_value=_headless_default(),
                 choices=["true", "false"],
-                description="Gazebo with no GUI. Ignored when SIM=false.",
+                description=(
+                    "Gazebo with no GUI. Defaults from $GUI in .env "
+                    "(GUI=true -> headless=false). Ignored when SIM=false."
+                ),
             ),
             DeclareLaunchArgument(
                 "world",
@@ -162,6 +178,12 @@ def generate_launch_description():
                 default_value="true",
                 choices=["true", "false"],
                 description="Serve the camera topics over HTTP on :8080.",
+            ),
+            DeclareLaunchArgument(
+                "dashboard",
+                default_value="false",
+                choices=["true", "false"],
+                description="Operator web UI on :8090 (chassis + arm teleop).",
             ),
             OpaqueFunction(function=_backends),
         ]

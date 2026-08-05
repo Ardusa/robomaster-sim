@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoboMaster Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">RoboMaster</div>
+    <div id="status" class="status">connecting…</div>
+    <div id="mode" class="mode"></div>
+  </header>
+
+  <main class="layout" id="layout">
+    <section class="pane" id="overview-pane" hidden>
+      <h2>Overview</h2>
+      <img id="overview" class="feed" alt="Top-down overview" />
+    </section>
+
+    <section class="pane">
+      <h2>Camera</h2>
+      <img id="raw" class="feed" alt="Robot camera" />
+    </section>
+
+    <section class="pane controls">
+      <h2>Drive</h2>
+      <div class="joy-wrap">
+        <canvas id="joystick" width="220" height="220"></canvas>
+      </div>
+      <div class="scales">
+        <label>Speed <input id="speed" type="range" min="0.05" max="1" step="0.05" /></label>
+        <label>Turn <input id="turn" type="range" min="0.05" max="2" step="0.05" /></label>
+      </div>
+      <p id="gamepad-label" class="hint">No gamepad — use the joystick or plug in an Xbox controller.</p>
+
+      <h2>Arm</h2>
+      <div class="btn-grid">
+        <button type="button" data-arm="x+">Fwd</button>
+        <button type="button" data-arm="x-">Back</button>
+        <button type="button" data-arm="z+">Up</button>
+        <button type="button" data-arm="z-">Down</button>
+        <button type="button" data-arm="preset_tuck">Tuck</button>
+        <button type="button" data-arm="preset_reach">Reach</button>
+        <button type="button" data-arm="preset_raise">Raise</button>
+        <button type="button" data-arm="grip_open">Open</button>
+        <button type="button" data-arm="grip_close">Close</button>
+      </div>
+      <p class="hint">Gamepad: left stick drive, right stick turn, A tuck / B reach / X raise, LB open / RB close, D-pad arm jog.</p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

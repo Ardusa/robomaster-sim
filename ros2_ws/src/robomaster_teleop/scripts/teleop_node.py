@@ -12,6 +12,7 @@ import select
 import sys
 import termios
 import threading
+import time
 import tty
 
 import rclpy
@@ -81,10 +82,12 @@ SPEED_BINDINGS = {
     "c": (1.0, 0.9),
 }
 
+# Chosen from joint pairs known to be inside arm_1/arm_2 limits, not just
+# inside the reach radius: (0.18, 0.10) looks reachable but needs arm_1 > max.
 PRESETS = {
-    "preset_tuck": (0.05, 0.18),
-    "preset_reach": (0.18, 0.10),
-    "preset_raise": (0.08, 0.22),
+    "preset_tuck": (0.059, 0.190),
+    "preset_reach": (0.159, 0.171),
+    "preset_raise": (0.023, 0.229),
 }
 
 JOG = 0.02  # metres per keypress
@@ -99,7 +102,9 @@ class TeleopNode(Node):
         self.speed = 0.3
         self.turn = 0.8
         self._lock = threading.Lock()
-        self._busy = False
+        # Timestamp, not a boolean: a dropped goal response must not wedge the
+        # arm keys for the rest of the session.
+        self._arm_deadline = 0.0
 
     def send_twist(self, x, y, th) -> None:
         tw = Twist()
@@ -112,14 +117,15 @@ class TeleopNode(Node):
         self.pub.publish(Twist())
 
     def _arm_goal(self, x: float, z: float, absolute: bool) -> None:
+        now = time.monotonic()
         with self._lock:
-            if self._busy:
+            if now < self._arm_deadline:
                 return
-            self._busy = True
+            self._arm_deadline = now + 10.0
         if not self.move_arm.wait_for_server(timeout_sec=0.5):
-            self.get_logger().warn("move_arm action not available")
+            print("arm: move_arm action not available")
             with self._lock:
-                self._busy = False
+                self._arm_deadline = 0.0
             return
         goal = MoveArm.Goal()
         goal.x = x
@@ -127,25 +133,43 @@ class TeleopNode(Node):
         goal.absolute = absolute
         fut = self.move_arm.send_goal_async(goal)
 
-        def _done(f):
+        def _clear():
             with self._lock:
-                self._busy = False
+                self._arm_deadline = 0.0
+
+        def _on_result(rf):
+            _clear()
+            try:
+                res = rf.result().result
+            except Exception as exc:  # noqa: BLE001
+                print(f"arm: no result ({exc})")
+                return
+            state = "moved" if res.success else "FAILED"
+            print(f"arm: {state} -> x={res.x:.3f} z={res.z:.3f} ({res.message})")
+
+        def _on_goal(f):
             try:
                 gh = f.result()
-                if gh is None or not gh.accepted:
-                    self.get_logger().warn("move_arm rejected")
             except Exception as exc:  # noqa: BLE001
-                self.get_logger().warn(f"move_arm failed: {exc}")
+                _clear()
+                print(f"arm: send failed ({exc})")
+                return
+            if gh is None or not gh.accepted:
+                _clear()
+                print("arm: goal rejected")
+                return
+            gh.get_result_async().add_done_callback(_on_result)
 
-        fut.add_done_callback(_done)
+        fut.add_done_callback(_on_goal)
 
     def _gripper(self, open_cmd: bool) -> None:
         if not self.set_gripper.wait_for_server(timeout_sec=0.5):
-            self.get_logger().warn("set_gripper action not available")
+            print("gripper: set_gripper action not available")
             return
         goal = SetGripper.Goal()
         goal.command = SetGripper.Goal.OPEN if open_cmd else SetGripper.Goal.CLOSE
         goal.force_level = 1
+        print("gripper: " + ("opening" if open_cmd else "closing"))
         self.set_gripper.send_goal_async(goal)
 
     def handle_key(self, key: str) -> None:

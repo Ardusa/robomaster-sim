@@ -7,5 +7,9 @@ services:
       - SIM=${SIM}
       - WORLD=${WORLD}
       - ROBOMASTER_IP=${ROBOMASTER_IP}
+      - GUI=${GUI:-false}
+    ports:
+      - "8080:8080/tcp"
+      - "8090:8090/tcp"
     volumes:
       - ./ros2_ws:/root/ros2_ws

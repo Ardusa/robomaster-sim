@@ -30,8 +30,7 @@ services:
     # rest are uncommented here for when video/telemetry get wired in —
     # trim to just 40923 if you want a smaller attack surface until then.
     ports:
-      # web_video_server — the only way video reaches you on this host.
-      - "8080:8080/tcp"
+      # 8080/8090 come from docker-compose.yml (video + dashboard).
       - "40923:40923/tcp"
       - "40924:40924/tcp"
       - "40925:40925/tcp"

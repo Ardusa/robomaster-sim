@@ -201,13 +201,13 @@ def generate_launch_description():
     gazebo_share = get_package_share_directory("robomaster_gazebo")
     description_share = get_package_share_directory("robomaster_description")
 
-    # Gazebo publishes the camera on its own transport; these bridge it onto
-    # the ROS topics apriltag_node reads. Names match camera_node.py's, so
-    # detection doesn't care which backend is running.
+    # Gazebo publishes cameras on its own transport; these bridge them onto
+    # ROS topics. Robot cam names match camera_node.py so detection can't tell
+    # backends apart. /camera/overview is the dashboard top-down feed.
     camera_bridge = Node(
         package="ros_gz_image",
         executable="image_bridge",
-        arguments=["/camera/image_raw"],
+        arguments=["/camera/image_raw", "/camera/overview"],
         output="screen",
         parameters=[{"use_sim_time": True}],
     )
@@ -215,7 +215,9 @@ def generate_launch_description():
     camera_info_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        arguments=["/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo"],
+        arguments=[
+            "/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
+        ],
         output="screen",
         parameters=[{"use_sim_time": True}],
     )

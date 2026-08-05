@@ -23,7 +23,14 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
-from arm_kinematics import GRIPPER_CLOSED, GRIPPER_OPEN, fk, ik
+from arm_kinematics import (
+    GRIPPER_CLOSED,
+    GRIPPER_OPEN,
+    HOME_X,
+    HOME_Z,
+    fk,
+    solve,
+)
 from robomaster_arm.action import MoveArm, SetGripper
 from robomaster_arm.msg import ArmState, GripperState
 from robomaster_driver.srv import ArmSdk, GripperSdk
@@ -33,7 +40,13 @@ class ArmNode(Node):
     def __init__(self) -> None:
         super().__init__("robomaster_arm")
         self.declare_parameter("sim", True)
+        self.declare_parameter("home_x", HOME_X)
+        self.declare_parameter("home_z", HOME_Z)
         self.sim = self.get_parameter("sim").get_parameter_value().bool_value
+        self._home = (
+            self.get_parameter("home_x").value,
+            self.get_parameter("home_z").value,
+        )
 
         self._cb = ReentrantCallbackGroup()
         self._arm_1 = 0.0
@@ -60,6 +73,11 @@ class ArmNode(Node):
             )
             self._arm_cli = None
             self._gripper_cli = None
+            # Joint zeros put the arm straight up at full extension, where the
+            # chain is singular and every outward jog is unreachable. Leave
+            # that pose as soon as the controller is listening.
+            self._homed = False
+            self._home_timer = self.create_timer(0.5, self._try_home)
         else:
             self._arm_cmd = None
             self._gripper_cmd = None
@@ -89,6 +107,18 @@ class ArmNode(Node):
             callback_group=self._cb,
         )
         self.get_logger().info(f"arm node ready (sim={self.sim})")
+
+    def _try_home(self) -> None:
+        if self._homed or self._arm_cmd.get_subscription_count() < 1:
+            return
+        arm_1, arm_2, _ = solve(*self._home)
+        self._arm_cmd.publish(Float64MultiArray(data=[arm_1, arm_2]))
+        self._gripper_cmd.publish(Float64MultiArray(data=[GRIPPER_OPEN]))
+        self._homed = True
+        self._home_timer.cancel()
+        self.get_logger().info(
+            f"homed to x={self._home[0]:.3f} z={self._home[1]:.3f}"
+        )
 
     def _accept_goal(self, _goal_request):
         return GoalResponse.ACCEPT
@@ -170,13 +200,16 @@ class ArmNode(Node):
         return result
 
     def _move_sim(self, target_x, target_z, goal_handle, feedback):
-        sol = ik(target_x, target_z)
-        if sol is None:
-            return False, f"unreachable ({target_x:.3f}, {target_z:.3f})"
-        arm_1, arm_2 = sol
+        arm_1, arm_2, notes = solve(target_x, target_z)
         self._arm_cmd.publish(Float64MultiArray(data=[arm_1, arm_2]))
+        # Settle against the pose actually commanded, not the raw request, so a
+        # clamped goal still reports success once it arrives.
+        reached_x, reached_z = fk(arm_1, arm_2)
+        message = "; ".join(["ok"] + notes)
 
         deadline = time.monotonic() + 8.0
+        last_x, last_z = fk(self._arm_1, self._arm_2)
+        last_progress = time.monotonic()
         while rclpy.ok() and time.monotonic() < deadline:
             if goal_handle.is_cancel_requested:
                 goal_handle.canceled()
@@ -186,10 +219,20 @@ class ArmNode(Node):
             feedback.z = z
             feedback.moving = True
             goal_handle.publish_feedback(feedback)
-            if math.hypot(x - target_x, z - target_z) < 0.012:
-                return True, "ok"
+            error = math.hypot(x - reached_x, z - reached_z)
+            if error < 0.012:
+                return True, message
+            now = time.monotonic()
+            if math.hypot(x - last_x, z - last_z) > 0.001:
+                last_x, last_z = x, z
+                last_progress = now
+            elif now - last_progress > 1.0:
+                # Position control is proportional-only, so a pose held against
+                # a joint limit or gravity keeps a steady-state offset. Stop
+                # waiting on an error that will not shrink; report where it sat.
+                return True, f"{message}; stalled {error * 100:.1f} cm short"
             time.sleep(0.05)
-        return True, "timeout (command sent)"
+        return True, f"{message}; did not settle within 8s"
 
     def _move_tether(self, target_x, target_z, _absolute, goal_handle, feedback):
         if not self._wait_sdk(self._arm_cli):
@@ -227,9 +270,7 @@ class ArmNode(Node):
         if pos_fut.done() and pos_fut.result() and pos_fut.result().success:
             px = pos_fut.result().x_cm / 100.0
             pz = pos_fut.result().y_cm / 100.0
-            sol = ik(px, pz)
-            if sol is not None:
-                self._arm_1, self._arm_2 = sol
+            self._arm_1, self._arm_2, _ = solve(px, pz)
         return True, res.message
 
     def _execute_gripper(self, goal_handle):
