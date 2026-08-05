@@ -61,8 +61,8 @@
     </joint> -->
 
     <!-- Topics match camera_node.py's defaults so apriltag_node can't tell sim
-         from the real stream. On camera_optical_link because Gazebo emits the
-         optical convention (Z forward), which apriltag pose assumes. -->
+         from the real stream. The sensor hangs off camera_optical_link so its
+         images are stamped in the frame apriltag pose estimation assumes. -->
     <xacro:if value="${sim}">
       <!-- sdformat lumps fixed-joint children into their parent, which deletes
            camera_optical_link. The sensor itself survives that, but its frame
@@ -76,6 +76,16 @@
 
       <gazebo reference="${tf_prefix}camera_optical_link">
         <sensor name="camera" type="camera">
+          <!-- Renderer axes are not the ROS optical axes. Gazebo points a camera
+               down its frame's +X with +Z up, while camera_optical_link is the
+               ROS optical frame: +Z forward, +X right, +Y down. Mounting the
+               sensor there without this rotation aims it 90 deg to the robot's
+               right and renders upside down, because the optical frame's +X is
+               the image's right edge and its +Z (up, to the renderer) is down.
+               This rotates the renderer's frame back onto the optical one:
+               sensor +X to optical +Z, +Y to -X, +Z to -Y. The frame_id below
+               stays camera_optical_link, which is what apriltag needs. -->
+          <pose>0 0 0 1.5708 -1.5708 0</pose>
           <camera>
             <!-- ~74 deg, approximating the EP's real stream. Gazebo derives
                  camera_info from this, so sim needs no calibration. -->
