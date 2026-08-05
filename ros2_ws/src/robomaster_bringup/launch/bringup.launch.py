@@ -144,7 +144,9 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "world",
-                default_value="",
+                # Same route SIM takes: set it in .env, which compose passes into
+                # the container. An explicit world:= still wins, for a one-off.
+                default_value=os.environ.get("WORLD", ""),
                 description=(
                     "Gazebo world file, absolute or bare name under "
                     "robomaster_gazebo/worlds. Empty uses $WORLD from .env "

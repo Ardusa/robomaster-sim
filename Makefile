@@ -101,6 +101,8 @@ test-connection: build ## Standalone TCP connectivity check against the real rob
 #   bringup-detection  camera + detection — are tags being found?
 #
 # SIM in .env picks the backend (true = Gazebo, false = the physical robot).
+# WORLD in .env picks the Gazebo scene when SIM=true; compose passes both into
+# the container. An unlisted name fails by name rather than reaching Gazebo.
 # Video is watched in a browser at :8080 — there is no GUI window anywhere.
 # HEADLESS=1 drops the Gazebo GUI; it's forced on Mac, which has no display.
 LAUNCH = ros2 launch robomaster_bringup bringup.launch.py \

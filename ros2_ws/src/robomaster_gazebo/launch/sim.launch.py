@@ -46,14 +46,24 @@ def _gz(context, *args, **kwargs):
     # arrives here as "" — hence the fallback rather than trusting the default.
     world = LaunchConfiguration("world").perform(context) or _default_world()
 
-    # A bare name is a convenience for the worlds we ship. Anything we don't
-    # have has to fall through untouched so Gazebo can resolve its own builtins
-    # (empty.sdf) rather than being turned into a path that doesn't exist. isfile,
-    # not exists: an empty name would otherwise "resolve" to worlds/ itself.
+    # A bare name is resolved against the worlds we ship, and a miss fails here
+    # naming itself — same reasoning as SIM. A typo in .env would otherwise reach
+    # Gazebo and abort with its own less obvious message, and a Gazebo builtin
+    # like empty.sdf would come up declaring no Sensors system, which is a camera
+    # that silently never renders. Absolute paths are trusted as deliberate.
+    worlds_dir = os.path.join(gazebo_share, "worlds")
     if not os.path.isabs(world):
-        shipped = os.path.join(gazebo_share, "worlds", world)
-        if os.path.isfile(shipped):
-            world = shipped
+        shipped = os.path.join(worlds_dir, world)
+        if not os.path.isfile(shipped):
+            available = sorted(
+                entry.name for entry in os.scandir(worlds_dir) if entry.is_file()
+            )
+            raise RuntimeError(
+                f"world '{world}' is not one of the worlds robomaster_gazebo ships "
+                f"({', '.join(available)}). Set WORLD in .env to one of those, or "
+                f"pass an absolute path to use a world from somewhere else."
+            )
+        world = shipped
 
     # Engines are per-process, not global: the GUI's Ogre 1.x path aborts on an
     # AxisAlignedBox assertion inside its render thread, which is a black window
