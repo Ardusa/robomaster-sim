@@ -1,0 +1,13 @@
+# Loaded via spawner --param-file. Types are also registered in
+# robomaster_drivetrain/config/sim_controllers.yaml because gz_ros2_control
+# takes a single parameters file at plugin load time.
+arm_controller:
+  ros__parameters:
+    joints:
+      - arm_1_joint
+      - arm_2_joint
+
+gripper_controller:
+  ros__parameters:
+    joints:
+      - gripper_m_joint

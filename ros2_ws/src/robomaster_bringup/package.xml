@@ -19,6 +19,7 @@
          both. The backends do not depend on each other. -->
     <exec_depend>robomaster_description</exec_depend>
     <exec_depend>robomaster_drivetrain</exec_depend>
+    <exec_depend>robomaster_arm</exec_depend>
     <exec_depend>robomaster_teleop</exec_depend>
     <exec_depend>robomaster_gazebo</exec_depend>
     <exec_depend>robomaster_driver</exec_depend>

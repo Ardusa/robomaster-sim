@@ -5,9 +5,8 @@
     <version>0.0.1</version>
     <description>Human input for the RoboMaster EP.
 
-        Publishes to subsystem topics (today: /cmd_vel_teleop). Does not spawn
-        controllers or own the drivetrain — that is robomaster_drivetrain.
-        Future arm keybinds belong here too.
+        Publishes Twist on /cmd_vel_teleop and sends Cartesian arm / gripper
+        goals to robomaster_arm. Does not spawn controllers.
     </description>
     <maintainer email="ardusa05@gmail.com">Ankur</maintainer>
     <license>MIT</license>
@@ -16,7 +15,9 @@
 
     <exec_depend>launch</exec_depend>
     <exec_depend>launch_ros</exec_depend>
-    <exec_depend>teleop_twist_keyboard</exec_depend>
+    <exec_depend>rclpy</exec_depend>
+    <exec_depend>geometry_msgs</exec_depend>
+    <exec_depend>robomaster_arm</exec_depend>
 
     <export>
         <build_type>ament_cmake</build_type>

@@ -1,173 +1,11 @@
 <?xml version="1.0"?>
-
 <robot xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro">
 
-  <!-- Each finger is a five-bar loop driven by the gripper_m_joint slider: the
-       chain gripper_m -> _1 -> _2 -> _4 -> _5 -> _6 -> _7 closes back onto
-       gripper_m through the link the commented-out *_joint_8_dummy blocks below
-       stood in for. URDF cannot express that closure, so the chain used to be
-       twelve free hinges with zero effort and no damping, which gravity swung
-       indefinitely, and the loose ends were free to pass through the fingers.
-
-       As in arm.urdf.xacro, the whole assembly is welded: Gazebo Fortress has no
-       way to represent a closed chain (no mimic before SDFormat 14, no
-       closed-chain support in the DART backend), the zero pose is the consistent
-       CAD assembly pose, and welding leaves nothing that can drift or diverge
-       between machines. The gripper is not actuated here either; ros2_control
-       drives the four wheels only. Slider travel, kept for reference:
-       gripper_m_joint [-0.023, 0.001] m along -x.
-
-       Inertias are computed by scripts/mesh_inertia.py from each link's
-       collision mesh, or its visual mesh where it has no collision geometry.
-       Edit scripts/inertia_manifest.txt and rerun rather than editing these. -->
+  <!-- Serial-equivalent gripper: one prismatic opening DoF. The real fingers
+       are a five-bar loop Fortress cannot close; finger meshes ride on the
+       slider so open/close is physical and graspable without free hinges. -->
 
   <xacro:macro name="gripper" params="tf_prefix=''">
-
-    <link name="${tf_prefix}left_gripper_link_1">
-      <inertial>
-        <origin xyz="0.01029408 0.007220001 9.004375e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="5.91414e-08" ixy="-4.22033e-08" ixz="8.43934e-10" iyy="1.06563e-07"
-          iyz="-1.25763e-09" izz="1.08961e-07" />
-      </inertial>
-      <visual name="left_gripper_1">
-        <origin xyz="-1.52e-05 8.12e-05 -2.25e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_1.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-    </link>
-
-    <link name="${tf_prefix}left_gripper_link_2">
-      <inertial>
-        <origin xyz="0.006233221 0.006162566 9.246498e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="9.3765e-08" ixy="8.50684e-09" ixz="0" iyy="5.07145e-08" iyz="0"
-          izz="1.05659e-07" />
-      </inertial>
-      <visual name="left_gripper_2">
-        <origin xyz="0.0135565 -0.0033557 -2.25e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_2.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="left_gripper_2_collision">
-        <origin xyz="0.0136108 -0.003318 -0.0296613" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_2_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <!-- <link name="left_gripper_link_3_dummy">
-          <inertial>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-            <mass value="0.001"/>
-            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
-          </inertial>
-        </link> -->
-
-    <link name="${tf_prefix}left_gripper_link_4">
-      <inertial>
-        <origin xyz="0.01880121 0.004378724 9.836359e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="4.76264e-08" ixy="-5.12098e-08" ixz="0" iyy="2.03268e-07" iyz="0"
-          izz="2.12074e-07" />
-      </inertial>
-      <visual name="left_gripper_4">
-        <origin xyz="-4.74e-05 0.0001737 -1.67e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_4.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="left_gripper_4_collision">
-        <origin xyz="-7.56e-05 -2.97e-05 -0.0296554" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_4_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <link name="${tf_prefix}left_gripper_link_5">
-      <inertial>
-        <origin xyz="0.02010775 -0.01019062 4.63665e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="7.01223e-08" ixy="3.58216e-08" ixz="-7.10487e-10" iyy="1.57401e-07"
-          iyz="5.92429e-10" izz="1.72258e-07" />
-      </inertial>
-      <visual name="left_gripper_5">
-        <origin xyz="-7.26e-05 -1.8e-06 -1.83e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_5.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="left_gripper_5_collision">
-        <origin xyz="-7.26e-05 -1.8e-06 -1.83e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_5_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <link name="${tf_prefix}left_gripper_link_6">
-      <inertial>
-        <origin xyz="-0.007466225 -0.008413082 -5.548465e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="7.46119e-08" ixy="-4.07009e-08" ixz="0" iyy="6.31939e-08" iyz="0"
-          izz="9.96613e-08" />
-      </inertial>
-      <visual name="left_gripper_6">
-        <origin xyz="-0.0149194 -0.0168522 -1.83e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_6.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="left_gripper_6_collision">
-        <origin xyz="-0.0149892 -0.0167532 -0.0001821" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_6_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <!-- gripper_left_collision.dae is an open shell, so this one is a uniform
-         box over the mesh bounds rather than an exact volume integral. -->
-    <link name="${tf_prefix}left_gripper_link_7">
-      <inertial>
-        <origin xyz="-0.008614509 -0.009626222 -5.6005e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="8.08066e-08" ixy="0" ixz="0" iyy="7.26535e-08" iyz="0" izz="1.15316e-07" />
-      </inertial>
-      <visual name="left_gripper_7">
-        <origin xyz="-0.0153264 -0.0166317 -1.83e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_7.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="left_gripper_collision">
-        <origin xyz="-0.0149126 -0.0167727 -0.0296388" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
 
     <link name="${tf_prefix}gripper_link">
       <inertial>
@@ -193,15 +31,42 @@
       </collision>
     </link>
 
-    <!-- Geometryless frames get a nominal point-mass inertia: small enough not
-         to perturb the body they weld into, large enough to stay positive
-         definite. -->
     <link name="${tf_prefix}gripper_m_link">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+        <mass value="0.02" />
+        <inertia ixx="1e-06" ixy="0" ixz="0" iyy="1e-06" iyz="0" izz="1e-06" />
       </inertial>
+      <visual name="left_gripper_7">
+        <origin xyz="-0.0153264 -0.0166317 -1.83e-05" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_7.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="right_gripper_7">
+        <origin xyz="-3.72e-05 9e-07 -1.83e-05" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/right_gripper_7.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <collision name="left_gripper_collision">
+        <origin xyz="-0.0149126 -0.0167727 -0.0296388" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_collision.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+      </collision>
+      <collision name="right_gripper_7_collision">
+        <origin xyz="-0.0150056 0.0168496 -0.0296388" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/right_gripper_7_collision.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+      </collision>
     </link>
 
     <link name="${tf_prefix}gripper_t_link">
@@ -212,280 +77,21 @@
       </inertial>
     </link>
 
-    <!-- Slider that drives both fingers; welded with the loops it closes. -->
-    <joint name="${tf_prefix}gripper_m_joint" type="fixed">
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <parent link="${tf_prefix}gripper_link" />
-      <child link="${tf_prefix}gripper_m_link" />
-    </joint>
-
-
-    <!-- <link name="left_gripper_8_link_dummy">
-          <inertial>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-            <mass value="0.001"/>
-            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
-          </inertial>
-        </link> -->
-
-    <link name="${tf_prefix}right_gripper_link_1">
-      <inertial>
-        <origin xyz="0.01029408 -0.007219998 9.001794e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="5.91414e-08" ixy="4.22034e-08" ixz="8.43886e-10" iyy="1.06563e-07"
-          iyz="1.25763e-09" izz="1.08961e-07" />
-      </inertial>
-      <visual name="right_gripper_1">
-        <origin xyz="-1.52e-05 -8.12e-05 -2.25e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_1.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-    </link>
-
-    <link name="${tf_prefix}right_gripper_link_2">
-      <inertial>
-        <origin xyz="0.006030116 -0.007040485 9.246502e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="9.37648e-08" ixy="-8.50677e-09" ixz="0" iyy="5.07145e-08" iyz="0"
-          izz="1.05659e-07" />
-      </inertial>
-      <visual name="right_gripper_2">
-        <origin xyz="0.0127099 0.0021056 -2.25e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_2.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="right_gripper_2_collision">
-        <origin xyz="0.0134077 0.0024401 -0.0296613" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_2_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <!-- <link name="right_gripper_link_3_dummy">
-          <inertial>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-            <mass value="0.001"/>
-            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
-          </inertial>
-        </link> -->
-
-    <link name="${tf_prefix}right_gripper_link_4">
-      <inertial>
-        <origin xyz="0.01881111 -0.00439684 9.835525e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="4.76265e-08" ixy="5.121e-08" ixz="0" iyy="2.03269e-07" iyz="0"
-          izz="2.12075e-07" />
-      </inertial>
-      <visual name="right_gripper_4">
-        <origin xyz="-4.74e-05 -0.0001737 -1.67e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_4.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="right_gripper_4_collision">
-        <origin xyz="-6.57e-05 1.16e-05 -0.0296554" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_4_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <link name="${tf_prefix}right_gripper_link_5">
-      <inertial>
-        <origin xyz="0.02009544 0.01021551 3.635011e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="7.00858e-08" ixy="-3.58413e-08" ixz="-5.92243e-10" iyy="1.57345e-07"
-          iyz="-5.28093e-10" izz="1.72323e-07" />
-      </inertial>
-      <visual name="right_gripper_5">
-        <origin xyz="-7.26e-05 1.7e-06 -1.83e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_5.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="right_gripper_5_collision">
-        <origin xyz="-0.0001606 2.35e-05 8.1e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_5_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <link name="${tf_prefix}right_gripper_link_6">
-      <inertial>
-        <origin xyz="-0.008144618 0.009042674 -5.583705e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="7.46119e-08" ixy="4.07009e-08" ixz="0" iyy="6.31939e-08" iyz="0"
-          izz="9.96613e-08" />
-      </inertial>
-      <visual name="right_gripper_6">
-        <origin xyz="-0.03103 0.0338258 -1.83e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_6.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="right_gripper_6_collision">
-        <origin xyz="-0.0156676 0.0173828 6.82e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_6_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <!-- right_gripper_7_collision.dae is an open shell, so this one is a uniform
-         box over the mesh bounds rather than an exact volume integral. -->
-    <link name="${tf_prefix}right_gripper_link_7">
-      <inertial>
-        <origin xyz="-0.008707509 0.009703122 -5.6035e-05" rpy="0 0 0" />
-        <mass value="0.001" />
-        <inertia ixx="8.08068e-08" ixy="0" ixz="0" iyy="7.26536e-08" iyz="0" izz="1.15316e-07" />
-      </inertial>
-      <visual name="right_gripper_7">
-        <origin xyz="-3.72e-05 9e-07 -1.83e-05" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_7.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-        <material name="EP_up.001" />
-      </visual>
-      <collision name="right_gripper_7_collision">
-        <origin xyz="-0.0150056 0.0168496 -0.0296388" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_7_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
-    </link>
-
-    <!-- <link name="right_gripper_link_8_dummy">
-          <inertial>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-            <mass value="0.001"/>
-            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
-          </inertial>
-        </link> -->
-
-    <joint name="${tf_prefix}left_gripper_joint_1" type="fixed">
-      <origin xyz="0.0163032 0.0212032 -0.0399201" rpy="0 0 0" />
-      <parent link="${tf_prefix}gripper_m_link" />
-      <child link="${tf_prefix}left_gripper_link_1" />
-    </joint>
-
-    <joint name="${tf_prefix}left_gripper_joint_2" type="fixed">
-      <origin xyz="0.0213495 0.0130363 0" rpy="0 0 0" />
-      <parent link="${tf_prefix}left_gripper_link_1" />
-      <child link="${tf_prefix}left_gripper_link_2" />
-    </joint>
-
-    <!-- <joint name="left_gripper_joint_3_dummy" type="fixed">
-          <origin xyz="0.0136876 -0.0029412 0.0002778" rpy="0 0 0"/>
-          <parent link="left_gripper_link_2"/>
-          <child link="left_gripper_link_3_dummy"/>
-        </joint> -->
-
-    <joint name="${tf_prefix}left_gripper_joint_4" type="fixed">
-      <origin xyz="0.00485 0.0204148 -5.8e-06" rpy="0 0 0" />
-      <parent link="${tf_prefix}left_gripper_link_2" />
-      <child link="${tf_prefix}left_gripper_link_4" />
-    </joint>
-
-    <joint name="${tf_prefix}left_gripper_joint_6" type="fixed">
-      <origin xyz="0.0051144 -0.0140851 0" rpy="0 0 0" />
-      <parent link="${tf_prefix}left_gripper_link_5" />
-      <child link="${tf_prefix}left_gripper_link_6" />
-    </joint>
-
-    <joint name="${tf_prefix}left_gripper_joint_7" type="fixed">
-      <origin xyz="-0.0148823 -0.0168513 0" rpy="0 0 0" />
-      <parent link="${tf_prefix}left_gripper_link_6" />
-      <child link="${tf_prefix}left_gripper_link_7" />
-    </joint>
-
-    <!-- <joint name="left_gripper_joint_8_dummy" type="fixed">
-          <origin xyz="-0.014742 -0.0167196 -3.77e-05" rpy="0 0 0"/>
-          <parent link="left_gripper_link_7"/>
-          <child link="left_gripper_8_link_dummy"/>
-        </joint> -->
-
-    <joint name="${tf_prefix}left_gripper_joint_5" type="fixed">
-      <origin xyz="0.0385916 0.0103143 1.6e-06" rpy="0 0 0" />
-      <parent link="${tf_prefix}left_gripper_link_4" />
-      <child link="${tf_prefix}left_gripper_link_5" />
-    </joint>
-
-    <!-- Named _joint, not gripper_link: SDF frame names span links AND joints,
-         so sharing the name with the child link makes Gazebo reject the model
-         ("frame with name[gripper_link] already exists"). URDF alone tolerates it. -->
     <joint name="${tf_prefix}gripper_joint" type="fixed">
       <origin xyz="0.0002793 -0.027026 0.0001815" rpy="0 0 0" />
       <parent link="${tf_prefix}endpoint_bracket_link" />
       <child link="${tf_prefix}gripper_link" />
     </joint>
 
-    <joint name="${tf_prefix}right_gripper_joint_1" type="fixed">
-      <origin xyz="0.0163034 -0.0209781 -0.0399201" rpy="0 0 0" />
-      <parent link="${tf_prefix}gripper_m_link" />
-      <child link="${tf_prefix}right_gripper_link_1" />
+    <!-- 0 = open (extended), more negative = closed. Matches old travel. -->
+    <joint name="${tf_prefix}gripper_m_joint" type="prismatic">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <parent link="${tf_prefix}gripper_link" />
+      <child link="${tf_prefix}gripper_m_link" />
+      <axis xyz="-1 0 0" />
+      <limit lower="-0.023" upper="0.001" effort="20.0" velocity="0.05" />
+      <dynamics damping="1.0" friction="0.5" />
     </joint>
-
-    <joint name="${tf_prefix}right_gripper_joint_2" type="fixed">
-      <origin xyz="0.0213495 -0.0130363 0" rpy="0 0 0" />
-      <parent link="${tf_prefix}right_gripper_link_1" />
-      <child link="${tf_prefix}right_gripper_link_2" />
-    </joint>
-
-    <!-- <joint name="right_gripper_joint_3_dummy" type="fixed">
-          <origin xyz="0.013553 0.0025081 0.0002778" rpy="0 0 0"/>
-          <parent link="right_gripper_link_2"/>
-          <child link="right_gripper_link_3_dummy"/>
-        </joint> -->
-
-    <joint name="${tf_prefix}right_gripper_joint_4" type="fixed">
-      <origin xyz="0.0047151 -0.0208481 -5.8e-06" rpy="0 0 0" />
-      <parent link="${tf_prefix}right_gripper_link_2" />
-      <child link="${tf_prefix}right_gripper_link_4" />
-    </joint>
-
-    <joint name="${tf_prefix}right_gripper_joint_5" type="fixed">
-      <origin xyz="0.0385916 -0.0103143 1.6e-06" rpy="0 0 0" />
-      <parent link="${tf_prefix}right_gripper_link_4" />
-      <child link="${tf_prefix}right_gripper_link_5" />
-    </joint>
-
-    <joint name="${tf_prefix}right_gripper_joint_6" type="fixed">
-      <origin xyz="0.0059278 0.0133069 0" rpy="0 0 0" />
-      <parent link="${tf_prefix}right_gripper_link_5" />
-      <child link="${tf_prefix}right_gripper_link_6" />
-    </joint>
-
-    <joint name="${tf_prefix}right_gripper_joint_7" type="fixed">
-      <origin xyz="-0.0156955 0.0176295 0" rpy="0 0 0" />
-      <parent link="${tf_prefix}right_gripper_link_6" />
-      <child link="${tf_prefix}right_gripper_link_7" />
-    </joint>
-
-    <!-- <joint name="right_gripper_joint_8_dummy" type="fixed">
-          <origin xyz="-0.0147421 0.0167196 -3.77e-05" rpy="0 0 0"/>
-          <parent link="right_gripper_link_7"/>
-          <child link="right_gripper_link_8_dummy"/>
-        </joint> -->
 
     <joint name="${tf_prefix}gripper_joint_t" type="fixed">
       <origin xyz="0.124 0 -0.039" rpy="0 0 0" />

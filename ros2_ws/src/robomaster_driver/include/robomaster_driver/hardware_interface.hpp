@@ -4,6 +4,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "hardware_interface/handle.hpp"
@@ -11,9 +12,12 @@
 #include "hardware_interface/system_interface.hpp"
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
 #include "rclcpp/clock.hpp"
+#include "rclcpp/executors/single_threaded_executor.hpp"
 #include "rclcpp/macros.hpp"
+#include "rclcpp/node.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 
+#include "robomaster_driver/sdk_bridge.hpp"
 #include "robomaster_driver/tcp_client.hpp"
 
 namespace robomaster_driver {
@@ -24,18 +28,9 @@ namespace robomaster_driver {
 // tether.launch.py loads this one, against the same controller_manager
 // config and the same four wheel joint names.
 //
-// Command interfaces (velocity, rad/s), one per wheel joint, names
-// taken from <robot_param_prefix>ros2_control URDF block:
-//   front_left_wheel_joint, front_right_wheel_joint,
-//   rear_left_wheel_joint,  rear_right_wheel_joint
-// matching wheel.urdf.xacro's ${name}_wheel_joint naming.
-//
-// State interfaces (velocity): NOT real encoder feedback. The
-// plaintext SDK's chassis push only exposes position/attitude/status,
-// not per-wheel rpm, and polling "chassis speed ?" on the same
-// connection used for writes would block the control loop. State here
-// echoes the last commanded velocity. Fine for open-loop motion;
-// revisit if the attack demo needs closed-loop odometry.
+// Owns the single control-port client for the session and exposes
+// robotic_arm / robotic_gripper services so robomaster_arm shares that
+// socket instead of opening a second connection.
 class HardwareInterface : public hardware_interface::SystemInterface {
 public:
   RCLCPP_SHARED_PTR_DEFINITIONS(HardwareInterface)
@@ -59,10 +54,10 @@ public:
   write(const rclcpp::Time &time, const rclcpp::Duration &period) override;
 
 private:
+  void start_sdk_bridge();
+  void stop_sdk_bridge();
+
   static constexpr size_t kNumWheels = 4;
-  // Order matches the plaintext SDK's w1..w4 mapping:
-  // w1 = front-right, w2 = front-left, w3 = rear-right, w4 = rear-left.
-  // See protocol_api.html#chassis-wheel-speed-control.
   enum WheelIndex {
     kFrontRight = 0,
     kFrontLeft = 1,
@@ -70,29 +65,22 @@ private:
     kRearLeft = 3
   };
 
-  std::array<double, kNumWheels>
-      wheel_velocity_command_{}; // rad/s, from controller
-  std::array<double, kNumWheels> wheel_velocity_state_{}; // rad/s, echoed back
+  std::array<double, kNumWheels> wheel_velocity_command_{};
+  std::array<double, kNumWheels> wheel_velocity_state_{};
 
-  // Set from <param name="wheel_radius_m">...</param> in the URDF
-  // ros2_control block; needed to convert rad/s -> the SDK's rpm.
-  double wheel_radius_m_ =
-      0.05; // matches wheel collision radius in wheel.urdf.xacro
-  // No default: on_init() fails if the URDF didn't set it. Deliberately not
-  // read from ROBOMASTER_IP here - bringup.launch.py already resolves that
-  // env var into the URDF param, and getenv() returning nullptr on an unset
-  // var would construct std::string from nullptr (UB).
+  double wheel_radius_m_ = 0.05;
   std::string robot_ip_;
   int control_port_ = 40923;
-
-  // Arms the camera on activate. The control port takes one client and this
-  // interface holds it, so nothing else can send "stream on" while tethered -
-  // camera_node.py then just reads the video port.
   bool enable_video_ = true;
 
   std::unique_ptr<TcpClient> tcp_client_;
-  rclcpp::Clock steady_clock_{
-      RCL_STEADY_TIME}; // for RCLCPP_*_THROTTLE, must be a stable member
+  rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
+
+  // Arm/gripper services on the same socket as chassis writes.
+  rclcpp::Node::SharedPtr sdk_node_;
+  std::unique_ptr<SdkBridge> sdk_bridge_;
+  std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> sdk_executor_;
+  std::thread sdk_spin_thread_;
 };
 
 } // namespace robomaster_driver

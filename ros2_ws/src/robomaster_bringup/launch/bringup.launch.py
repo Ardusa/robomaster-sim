@@ -3,29 +3,18 @@
     SIM=true   -> Gazebo + gz_ros2_control
     SIM=false  -> the physical EP over its plaintext SDK
 
-Either way you get the same TF tree, the same mecanum controller (via
-robomaster_drivetrain), the same /cmd_vel_teleop and /cmd_vel_autonomy inputs,
-and the same AprilTag topics. The backend is the only thing that changes.
+Either way you get the same TF tree and the same subsystem interfaces. Gazebo
+or tether is always the foundational backend when SIM is set — not a separate
+debug target.
 
-The control/camera/detection args exist so a subsystem can be brought up on its
-own, which is what the make targets use to test one thing at a time:
+    make bringup             # full stack + teleop in the foreground (Makefile)
+    make bringup-teleop      # drivetrain + arm + teleop
+    make bringup-detection   # camera + detection
 
-    make bringup             # everything (control + camera + detection)
-    make bringup-teleop      # control only, then hands you the keyboard
-    make bringup-camera      # camera only — is the camera alive?
-    make bringup-detection   # camera + detection — are tags being found?
+Keyboard teleop is deliberately NOT a node here: it needs a real TTY. The
+Makefile runs it in the foreground after this launch comes up detached.
 
-Keyboard teleop is deliberately NOT a node here: teleop_twist_keyboard reads raw
-stdin, and a launch child process has no terminal, so it would capture no keys.
-Run robomaster_teleop in its own foreground shell — see the Makefile.
-
-SIM is read from the environment (set it in .env) and has no default: an unset
-or misspelled value fails here, naming itself, rather than silently booting the
-wrong backend. Same reasoning as ROBOMASTER_IP, which description.launch.py
-requires when SIM=false.
-
-Video is served over HTTP on :8080, not through an X11 GUI — watch it in a
-browser.
+SIM is read from the environment (set it in .env) and has no default.
 """
 
 import os
@@ -58,7 +47,14 @@ def _backends(context, *args, **kwargs):
     def flag(name):
         return LaunchConfiguration(name).perform(context) == "true"
 
-    control, camera, detection = flag("control"), flag("camera"), flag("detection")
+    control = flag("control")
+    camera = flag("camera")
+    detection = flag("detection")
+    arm = flag("arm")
+
+    # Detection needs a feed; on the real robot that means the camera node.
+    if detection and sim == "false":
+        camera = True
 
     def include(pkg, launch_file, **launch_args):
         return IncludeLaunchDescription(
@@ -68,31 +64,30 @@ def _backends(context, *args, **kwargs):
             launch_arguments={**launch_args, "sim": sim}.items(),
         )
 
-    # Always: everything downstream needs the URDF and the TF tree.
     actions = [include("robomaster_bringup", "description.launch.py")]
 
     if control:
         actions.append(include("robomaster_drivetrain", "control.launch.py"))
 
+    if arm:
+        actions.append(include("robomaster_arm", "arm.launch.py"))
+
     if sim == "true":
-        # Gazebo is the sim's camera *and* its physics, so it comes up either
-        # way — camera-only just means no controllers are spawned against it.
+        # Foundational: physics + sim camera whenever SIM=true.
         sim_args = {"headless": LaunchConfiguration("headless")}
-        # Empty means "let sim.launch.py pick its default": passing the empty
-        # string through would hand Gazebo a world named "".
         world = LaunchConfiguration("world").perform(context)
         if world:
             sim_args["world"] = world
         actions.append(include("robomaster_gazebo", "sim.launch.py", **sim_args))
     else:
-        # Path injected here so driver does not find bringup (or cycle).
-        # Controllers YAML is owned by drivetrain.
+        # Foundational tether: wheels and/or SDK bridge and/or camera.
         actions.append(
             include(
                 "robomaster_driver",
                 "tether.launch.py",
                 control=str(control).lower(),
                 camera=str(camera).lower(),
+                arm=str(arm).lower(),
                 controllers_file=os.path.join(
                     drivetrain_pkg, "config", "tether_controllers.yaml"
                 ),
@@ -102,19 +97,20 @@ def _backends(context, *args, **kwargs):
     if detection:
         actions.append(include("robomaster_detection", "detection.launch.py"))
 
-    # Idle until something opens a stream, and it's the only way to see video on
-    # a Mac (XQuartz can't render rqt here — GL has no working driver inside the
-    # emulated x86 image). Browse http://localhost:8080.
-    if flag("video_server") and (camera or detection):
-        actions.append(
-            Node(
-                package="web_video_server",
-                executable="web_video_server",
-                name="web_video_server",
-                output="screen",
-                parameters=[{"port": 8080, "use_sim_time": sim == "true"}],
+    if flag("video_server") and (camera or detection or sim == "true"):
+        # On SIM=true the Gazebo camera exists even if camera:=false was passed
+        # for a teleop-only stack — only serve video when the user asked for
+        # vision (camera/detection) so bringup-teleop stays quiet on :8080.
+        if camera or detection:
+            actions.append(
+                Node(
+                    package="web_video_server",
+                    executable="web_video_server",
+                    name="web_video_server",
+                    output="screen",
+                    parameters=[{"port": 8080, "use_sim_time": sim == "true"}],
+                )
             )
-        )
 
     return actions
 
@@ -129,16 +125,22 @@ def generate_launch_description():
                 description="Include robomaster_drivetrain (controllers + twist mux).",
             ),
             DeclareLaunchArgument(
+                "arm",
+                default_value="true",
+                choices=["true", "false"],
+                description="Include robomaster_arm (Cartesian actions + sim controllers).",
+            ),
+            DeclareLaunchArgument(
                 "camera",
                 default_value="true",
                 choices=["true", "false"],
-                description="Camera feed. Ignored when SIM=true (Gazebo owns it).",
+                description="Camera feed. Forced on when detection:=true and SIM=false.",
             ),
             DeclareLaunchArgument(
                 "detection",
                 default_value="true",
                 choices=["true", "false"],
-                description="AprilTag detection + overlay. Implies camera.",
+                description="AprilTag detection + overlay.",
             ),
             DeclareLaunchArgument(
                 "headless",
@@ -148,8 +150,6 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "world",
-                # Same route SIM takes: set it in .env, which compose passes into
-                # the container. An explicit world:= still wins, for a one-off.
                 default_value=os.environ.get("WORLD", ""),
                 description=(
                     "Gazebo world file, absolute or bare name under "

@@ -1,0 +1,15 @@
+# Cartesian goal in metres, in the arm_base_link frame.
+# x = forward, z = up (SDK uses cm with y as height; the node converts).
+float64 x
+float64 z
+# Absolute (moveto) when true; relative delta when false.
+bool absolute true
+---
+bool success
+string message
+float64 x
+float64 z
+---
+float64 x
+float64 z
+bool moving

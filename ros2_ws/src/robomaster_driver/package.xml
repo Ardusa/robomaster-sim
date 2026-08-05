@@ -4,11 +4,14 @@
     <name>robomaster_driver</name>
     <version>0.0.1</version>
     <description>C++ ros2_control hardware interface for the physical DJI RoboMaster EP over its
-        plaintext SDK (TCP 40923). Counterpart to gz_ros2_control on the sim side.</description>
+        plaintext SDK (TCP 40923). Counterpart to gz_ros2_control on the sim side.
+        Owns the single control-port client and exposes arm/gripper SDK services
+        for robomaster_arm.</description>
     <maintainer email="desaia11@msu.edu">Ankur</maintainer>
     <license>MIT</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
     <depend>rclcpp</depend>
     <depend>rclcpp_lifecycle</depend>
@@ -18,6 +21,8 @@
     <exec_depend>launch</exec_depend>
     <exec_depend>launch_ros</exec_depend>
     <exec_depend>controller_manager</exec_depend>
+    <exec_depend>rosidl_default_runtime</exec_depend>
+    <member_of_group>rosidl_interface_packages</member_of_group>
 
     <!-- tether.launch.py brings the camera up alongside the driver -->
     <exec_depend>robomaster_camera</exec_depend>
