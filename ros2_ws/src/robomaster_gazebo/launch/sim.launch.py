@@ -18,36 +18,67 @@ from launch.actions import (
     AppendEnvironmentVariable,
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    OpaqueFunction,
     TimerAction,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
-def generate_launch_description():
+def _default_world() -> str:
+    # Session choice lives in .env (WORLD=...), same pattern as SIM. Launch
+    # world:= still overrides for one-offs.
+    env = os.environ.get("WORLD", "").strip()
+    if env:
+        return env
+    return os.path.join(
+        get_package_share_directory("robomaster_gazebo"), "worlds", "robot_only.sdf"
+    )
+
+
+def _gz(context, *args, **kwargs):
     ros_gz_sim = get_package_share_directory("ros_gz_sim")
     gazebo_share = get_package_share_directory("robomaster_gazebo")
-    description_share = get_package_share_directory("robomaster_description")
+
+    # Launch propagates configurations into included descriptions, so bringup's
+    # own world argument shadows the default declared below and an unset world
+    # arrives here as "" — hence the fallback rather than trusting the default.
+    world = LaunchConfiguration("world").perform(context) or _default_world()
+
+    # A bare name is a convenience for the worlds we ship. Anything we don't
+    # have has to fall through untouched so Gazebo can resolve its own builtins
+    # (empty.sdf) rather than being turned into a path that doesn't exist. isfile,
+    # not exists: an empty name would otherwise "resolve" to worlds/ itself.
+    if not os.path.isabs(world):
+        shipped = os.path.join(gazebo_share, "worlds", world)
+        if os.path.isfile(shipped):
+            world = shipped
+
+    # Engines are per-process, not global: the GUI's Ogre 1.x path aborts on an
+    # AxisAlignedBox assertion inside its render thread, which is a black window
+    # and an empty entity tree even on empty.sdf, so the GUI needs ogre2. The
+    # server stays on ogre, the offscreen path the camera is known to render
+    # sensors through with no GPU passthrough in the container.
+    gz_args = f"-r --render-engine-server ogre --render-engine-gui ogre2 {world}"
 
     # headless:=true runs the server with no GUI, which is the only way this is
     # bearable without GPU passthrough (see the Makefile's platform warning).
     # Sensors still render offscreen, so the camera works either way.
-    gz = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(ros_gz_sim, "launch", "gz_sim.launch.py")),
-        launch_arguments={
-            "gz_args": PythonExpression(
-                [
-                    "'-r --render-engine ogre ' + '",
-                    LaunchConfiguration("world"),
-                    "' + ",
-                    "(' -s --headless-rendering' if '",
-                    LaunchConfiguration("headless"),
-                    "' == 'true' else '')",
-                ]
-            )
-        }.items(),
-    )
+    if LaunchConfiguration("headless").perform(context) == "true":
+        gz_args += " -s --headless-rendering"
+
+    return [
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(ros_gz_sim, "launch", "gz_sim.launch.py")),
+            launch_arguments={"gz_args": gz_args}.items(),
+        )
+    ]
+
+
+def generate_launch_description():
+    gazebo_share = get_package_share_directory("robomaster_gazebo")
+    description_share = get_package_share_directory("robomaster_description")
 
     spawn = Node(
         package="ros_gz_sim",
@@ -87,16 +118,22 @@ def generate_launch_description():
             DeclareLaunchArgument("headless", default_value="false", choices=["true", "false"]),
             DeclareLaunchArgument(
                 "world",
-                default_value=os.path.join(gazebo_share, "worlds", "small_house.world"),
-                description="Gazebo world file.",
+                default_value=_default_world(),
+                description=(
+                    "Gazebo world file: an absolute path, or a bare name resolved "
+                    "against this package's worlds/."
+                ),
             ),
             # Accepted and ignored: bringup passes sim to every include.
             DeclareLaunchArgument("sim", default_value="true", choices=["true", "false"]),
+            # model:// resolves against each entry directly.
             AppendEnvironmentVariable(
                 name="IGN_GAZEBO_RESOURCE_PATH",
-                value=os.pathsep.join([description_share, gazebo_share]),
+                value=os.pathsep.join(
+                    [description_share, gazebo_share, os.path.join(gazebo_share, "models")]
+                ),
             ),
-            gz,
+            OpaqueFunction(function=_gz),
             clock_bridge,
             TimerAction(period=4.0, actions=[spawn]),  # let Gazebo come up first
             TimerAction(period=8.0, actions=[camera_bridge, camera_info_bridge]),

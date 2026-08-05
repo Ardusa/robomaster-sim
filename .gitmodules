@@ -1,4 +1,0 @@
-[submodule "ros2_ws/src/robomaster_gazebo/external/aws_robomaker_small_house_world"]
-	path = ros2_ws/src/robomaster_gazebo/external/aws_robomaker_small_house_world
-	url = https://github.com/aws-robotics/aws-robomaker-small-house-world.git
-	branch = ros2

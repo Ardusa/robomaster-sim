@@ -1,9 +1,7 @@
-# WSL2-only: WSLg display forwarding and WSL-specific mounts.
-# GPU acceleration is best-effort here; do not force a GPU reservation so the
-# stack can still start on WSL2 systems without an exposed adapter.
 services:
   robomaster-sim:
-    network_mode: host
+    ports:
+      - "8080:8080/tcp"
     environment:
       - DISPLAY=:0
       - WAYLAND_DISPLAY=wayland-0

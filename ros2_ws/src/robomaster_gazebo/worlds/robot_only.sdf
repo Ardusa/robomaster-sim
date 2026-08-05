@@ -1,0 +1,73 @@
+<?xml version="1.0" ?>
+<!-- The robot, a floor, and a light: no scenery. This is the world to reach for
+     when the question is "does the robot itself work", and it's the sim default
+     because it's the only one that stays interactive without GPU passthrough.
+
+     The plugin list is the point of this file, not the geometry. Gazebo only
+     loads its own default systems (physics, user commands, scene broadcaster)
+     when a world declares no plugins at all, and Sensors is not among them — so
+     a world that says nothing gets a camera that never renders and a /camera
+     topic that never appears. Declaring systems here means the camera works
+     because of the world we ship, not by accident of Gazebo's defaults.
+
+     Scenery worlds must carry this same plugin block, or the camera dies with
+     them. -->
+<sdf version="1.9">
+  <world name="robot_only">
+    <plugin filename="ignition-gazebo-physics-system"
+            name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin filename="ignition-gazebo-user-commands-system"
+            name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <!-- Renders camera sensors and publishes them on Gazebo transport, which
+         ros_gz_image then bridges to /camera/image_raw. Without this there is
+         no camera. -->
+    <plugin filename="ignition-gazebo-sensors-system"
+            name="gz::sim::systems::Sensors">
+    </plugin>
+    <plugin filename="ignition-gazebo-contact-system"
+            name="gz::sim::systems::Contact">
+    </plugin>
+
+    <light name="sun" type="directional">
+      <pose>0 0 10 0 0 0</pose>
+      <cast_shadows>true</cast_shadows>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.3 0.2 -1</direction>
+    </light>
+
+    <!-- Inline rather than model://ground_plane so a first run never waits on
+         a Fuel download. -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>20 20</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>20 20</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.4 0.4 0.4 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>0.02 0.02 0.02 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>
