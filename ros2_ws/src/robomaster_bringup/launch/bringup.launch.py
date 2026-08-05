@@ -77,9 +77,13 @@ def _backends(context, *args, **kwargs):
     if sim == "true":
         # Gazebo is the sim's camera *and* its physics, so it comes up either
         # way — camera-only just means no controllers are spawned against it.
-        actions.append(
-            include("robomaster_gazebo", "sim.launch.py", headless=LaunchConfiguration("headless"))
-        )
+        sim_args = {"headless": LaunchConfiguration("headless")}
+        # Empty means "let sim.launch.py pick its default": passing the empty
+        # string through would hand Gazebo a world named "".
+        world = LaunchConfiguration("world").perform(context)
+        if world:
+            sim_args["world"] = world
+        actions.append(include("robomaster_gazebo", "sim.launch.py", **sim_args))
     else:
         actions.append(
             include(
@@ -137,6 +141,17 @@ def generate_launch_description():
                 default_value="false",
                 choices=["true", "false"],
                 description="Gazebo with no GUI. Ignored when SIM=false.",
+            ),
+            DeclareLaunchArgument(
+                "world",
+                # Same route SIM takes: set it in .env, which compose passes into
+                # the container. An explicit world:= still wins, for a one-off.
+                default_value=os.environ.get("WORLD", ""),
+                description=(
+                    "Gazebo world file, absolute or bare name under "
+                    "robomaster_gazebo/worlds. Empty uses $WORLD from .env "
+                    "(then robot_only.sdf). Ignored when SIM=false."
+                ),
             ),
             DeclareLaunchArgument(
                 "video_server",

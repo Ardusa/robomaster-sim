@@ -2,9 +2,10 @@
 <package format="3">
   <name>robomaster_gazebo</name>
   <version>0.0.1</version>
-  <description>Gazebo backend for the RoboMaster EP: only the sim-specific pieces
-    (Gazebo, the robot spawn, the camera/clock bridges). robomaster_bringup
-    includes this and supplies everything shared with the real robot.</description>
+  <description>Gazebo backend for the RoboMaster EP: Gazebo process, robot spawn,
+    camera/clock bridges, and sim worlds. Use cases (teleop, autonomy, detection)
+    live in robomaster_bringup; this package is the shared sim substrate they all
+    include when SIM=true.</description>
   <maintainer email="desaia11@msu.edu">Ankur</maintainer>
   <license>MIT</license>
 

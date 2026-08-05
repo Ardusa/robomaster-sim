@@ -2,13 +2,33 @@
 
 <robot xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro">
 
+  <!-- Each finger is a five-bar loop driven by the gripper_m_joint slider: the
+       chain gripper_m -> _1 -> _2 -> _4 -> _5 -> _6 -> _7 closes back onto
+       gripper_m through the link the commented-out *_joint_8_dummy blocks below
+       stood in for. URDF cannot express that closure, so the chain used to be
+       twelve free hinges with zero effort and no damping, which gravity swung
+       indefinitely, and the loose ends were free to pass through the fingers.
+
+       As in arm.urdf.xacro, the whole assembly is welded: Gazebo Fortress has no
+       way to represent a closed chain (no mimic before SDFormat 14, no
+       closed-chain support in the DART backend), the zero pose is the consistent
+       CAD assembly pose, and welding leaves nothing that can drift or diverge
+       between machines. The gripper is not actuated here either; ros2_control
+       drives the four wheels only. Slider travel, kept for reference:
+       gripper_m_joint [-0.023, 0.001] m along -x.
+
+       Inertias are computed by scripts/mesh_inertia.py from each link's
+       collision mesh, or its visual mesh where it has no collision geometry.
+       Edit scripts/inertia_manifest.txt and rerun rather than editing these. -->
+
   <xacro:macro name="gripper" params="tf_prefix=''">
 
     <link name="${tf_prefix}left_gripper_link_1">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.01029408 0.007220001 9.004375e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="5.91414e-08" ixy="-4.22033e-08" ixz="8.43934e-10" iyy="1.06563e-07"
+          iyz="-1.25763e-09" izz="1.08961e-07" />
       </inertial>
       <visual name="left_gripper_1">
         <origin xyz="-1.52e-05 8.12e-05 -2.25e-05" rpy="0 0 0" />
@@ -22,9 +42,10 @@
 
     <link name="${tf_prefix}left_gripper_link_2">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.006233221 0.006162566 9.246498e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="9.3765e-08" ixy="8.50684e-09" ixz="0" iyy="5.07145e-08" iyz="0"
+          izz="1.05659e-07" />
       </inertial>
       <visual name="left_gripper_2">
         <origin xyz="0.0135565 -0.0033557 -2.25e-05" rpy="0 0 0" />
@@ -53,9 +74,10 @@
 
     <link name="${tf_prefix}left_gripper_link_4">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.01880121 0.004378724 9.836359e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="4.76264e-08" ixy="-5.12098e-08" ixz="0" iyy="2.03268e-07" iyz="0"
+          izz="2.12074e-07" />
       </inertial>
       <visual name="left_gripper_4">
         <origin xyz="-4.74e-05 0.0001737 -1.67e-05" rpy="0 0 0" />
@@ -76,9 +98,10 @@
 
     <link name="${tf_prefix}left_gripper_link_5">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.02010775 -0.01019062 4.63665e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="7.01223e-08" ixy="3.58216e-08" ixz="-7.10487e-10" iyy="1.57401e-07"
+          iyz="5.92429e-10" izz="1.72258e-07" />
       </inertial>
       <visual name="left_gripper_5">
         <origin xyz="-7.26e-05 -1.8e-06 -1.83e-05" rpy="0 0 0" />
@@ -99,9 +122,10 @@
 
     <link name="${tf_prefix}left_gripper_link_6">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="-0.007466225 -0.008413082 -5.548465e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="7.46119e-08" ixy="-4.07009e-08" ixz="0" iyy="6.31939e-08" iyz="0"
+          izz="9.96613e-08" />
       </inertial>
       <visual name="left_gripper_6">
         <origin xyz="-0.0149194 -0.0168522 -1.83e-05" rpy="0 0 0" />
@@ -120,11 +144,13 @@
       </collision>
     </link>
 
+    <!-- gripper_left_collision.dae is an open shell, so this one is a uniform
+         box over the mesh bounds rather than an exact volume integral. -->
     <link name="${tf_prefix}left_gripper_link_7">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="-0.008614509 -0.009626222 -5.6005e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="8.08066e-08" ixy="0" ixz="0" iyy="7.26535e-08" iyz="0" izz="1.15316e-07" />
       </inertial>
       <visual name="left_gripper_7">
         <origin xyz="-0.0153264 -0.0166317 -1.83e-05" rpy="0 0 0" />
@@ -145,10 +171,10 @@
 
     <link name="${tf_prefix}gripper_link">
       <inertial>
-        <origin xyz="0.0326578 -9.78e-05 -0.0327003" rpy="0 0 0" />
+        <origin xyz="0.03145979 -0.0003026102 -0.03000667" rpy="0 0 0" />
         <mass value="0.15" />
-        <inertia ixx="0.0001376" ixy="7.89e-05" ixz="1.5e-06" iyy="0.0002582" iyz="2.9e-06"
-          izz="0.0002497" />
+        <inertia ixx="9.38273e-05" ixy="-5.32148e-07" ixz="4.93264e-06" iyy="8.75542e-05"
+          iyz="1.52057e-06" izz="0.000128853" />
       </inertial>
       <visual name="gripper_base">
         <origin xyz="0 0 0" rpy="0 0 0" />
@@ -167,11 +193,14 @@
       </collision>
     </link>
 
+    <!-- Geometryless frames get a nominal point-mass inertia: small enough not
+         to perturb the body they weld into, large enough to stay positive
+         definite. -->
     <link name="${tf_prefix}gripper_m_link">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
       </inertial>
     </link>
 
@@ -179,16 +208,15 @@
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
       </inertial>
     </link>
 
-    <joint name="${tf_prefix}gripper_m_joint" type="prismatic">
-      <limit effort="0" velocity="0" lower="-0.023" upper="0.001" />
+    <!-- Slider that drives both fingers; welded with the loops it closes. -->
+    <joint name="${tf_prefix}gripper_m_joint" type="fixed">
       <origin xyz="0 0 0" rpy="0 0 0" />
       <parent link="${tf_prefix}gripper_link" />
       <child link="${tf_prefix}gripper_m_link" />
-      <axis xyz="-1 0 0" />
     </joint>
 
 
@@ -202,9 +230,10 @@
 
     <link name="${tf_prefix}right_gripper_link_1">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.01029408 -0.007219998 9.001794e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="5.91414e-08" ixy="4.22034e-08" ixz="8.43886e-10" iyy="1.06563e-07"
+          iyz="1.25763e-09" izz="1.08961e-07" />
       </inertial>
       <visual name="right_gripper_1">
         <origin xyz="-1.52e-05 -8.12e-05 -2.25e-05" rpy="0 0 0" />
@@ -218,9 +247,10 @@
 
     <link name="${tf_prefix}right_gripper_link_2">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.006030116 -0.007040485 9.246502e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="9.37648e-08" ixy="-8.50677e-09" ixz="0" iyy="5.07145e-08" iyz="0"
+          izz="1.05659e-07" />
       </inertial>
       <visual name="right_gripper_2">
         <origin xyz="0.0127099 0.0021056 -2.25e-05" rpy="0 0 0" />
@@ -249,9 +279,10 @@
 
     <link name="${tf_prefix}right_gripper_link_4">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.01881111 -0.00439684 9.835525e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="4.76265e-08" ixy="5.121e-08" ixz="0" iyy="2.03269e-07" iyz="0"
+          izz="2.12075e-07" />
       </inertial>
       <visual name="right_gripper_4">
         <origin xyz="-4.74e-05 -0.0001737 -1.67e-05" rpy="0 0 0" />
@@ -272,9 +303,10 @@
 
     <link name="${tf_prefix}right_gripper_link_5">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="0.02009544 0.01021551 3.635011e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="7.00858e-08" ixy="-3.58413e-08" ixz="-5.92243e-10" iyy="1.57345e-07"
+          iyz="-5.28093e-10" izz="1.72323e-07" />
       </inertial>
       <visual name="right_gripper_5">
         <origin xyz="-7.26e-05 1.7e-06 -1.83e-05" rpy="0 0 0" />
@@ -295,9 +327,10 @@
 
     <link name="${tf_prefix}right_gripper_link_6">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="-0.008144618 0.009042674 -5.583705e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="7.46119e-08" ixy="4.07009e-08" ixz="0" iyy="6.31939e-08" iyz="0"
+          izz="9.96613e-08" />
       </inertial>
       <visual name="right_gripper_6">
         <origin xyz="-0.03103 0.0338258 -1.83e-05" rpy="0 0 0" />
@@ -316,11 +349,13 @@
       </collision>
     </link>
 
+    <!-- right_gripper_7_collision.dae is an open shell, so this one is a uniform
+         box over the mesh bounds rather than an exact volume integral. -->
     <link name="${tf_prefix}right_gripper_link_7">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="-0.008707509 0.009703122 -5.6035e-05" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="8.08068e-08" ixy="0" ixz="0" iyy="7.26536e-08" iyz="0" izz="1.15316e-07" />
       </inertial>
       <visual name="right_gripper_7">
         <origin xyz="-3.72e-05 9e-07 -1.83e-05" rpy="0 0 0" />
@@ -347,20 +382,16 @@
           </inertial>
         </link> -->
 
-    <joint name="${tf_prefix}left_gripper_joint_1" type="continuous">
+    <joint name="${tf_prefix}left_gripper_joint_1" type="fixed">
       <origin xyz="0.0163032 0.0212032 -0.0399201" rpy="0 0 0" />
       <parent link="${tf_prefix}gripper_m_link" />
       <child link="${tf_prefix}left_gripper_link_1" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
-    <joint name="${tf_prefix}left_gripper_joint_2" type="continuous">
+    <joint name="${tf_prefix}left_gripper_joint_2" type="fixed">
       <origin xyz="0.0213495 0.0130363 0" rpy="0 0 0" />
       <parent link="${tf_prefix}left_gripper_link_1" />
       <child link="${tf_prefix}left_gripper_link_2" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
     <!-- <joint name="left_gripper_joint_3_dummy" type="fixed">
@@ -369,28 +400,22 @@
           <child link="left_gripper_link_3_dummy"/>
         </joint> -->
 
-    <joint name="${tf_prefix}left_gripper_joint_4" type="continuous">
+    <joint name="${tf_prefix}left_gripper_joint_4" type="fixed">
       <origin xyz="0.00485 0.0204148 -5.8e-06" rpy="0 0 0" />
       <parent link="${tf_prefix}left_gripper_link_2" />
       <child link="${tf_prefix}left_gripper_link_4" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
-    <joint name="${tf_prefix}left_gripper_joint_6" type="continuous">
+    <joint name="${tf_prefix}left_gripper_joint_6" type="fixed">
       <origin xyz="0.0051144 -0.0140851 0" rpy="0 0 0" />
       <parent link="${tf_prefix}left_gripper_link_5" />
       <child link="${tf_prefix}left_gripper_link_6" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
-    <joint name="${tf_prefix}left_gripper_joint_7" type="continuous">
+    <joint name="${tf_prefix}left_gripper_joint_7" type="fixed">
       <origin xyz="-0.0148823 -0.0168513 0" rpy="0 0 0" />
       <parent link="${tf_prefix}left_gripper_link_6" />
       <child link="${tf_prefix}left_gripper_link_7" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
     <!-- <joint name="left_gripper_joint_8_dummy" type="fixed">
@@ -399,12 +424,10 @@
           <child link="left_gripper_8_link_dummy"/>
         </joint> -->
 
-    <joint name="${tf_prefix}left_gripper_joint_5" type="continuous">
+    <joint name="${tf_prefix}left_gripper_joint_5" type="fixed">
       <origin xyz="0.0385916 0.0103143 1.6e-06" rpy="0 0 0" />
       <parent link="${tf_prefix}left_gripper_link_4" />
       <child link="${tf_prefix}left_gripper_link_5" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
     <!-- Named _joint, not gripper_link: SDF frame names span links AND joints,
@@ -416,20 +439,16 @@
       <child link="${tf_prefix}gripper_link" />
     </joint>
 
-    <joint name="${tf_prefix}right_gripper_joint_1" type="continuous">
+    <joint name="${tf_prefix}right_gripper_joint_1" type="fixed">
       <origin xyz="0.0163034 -0.0209781 -0.0399201" rpy="0 0 0" />
       <parent link="${tf_prefix}gripper_m_link" />
       <child link="${tf_prefix}right_gripper_link_1" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
-    <joint name="${tf_prefix}right_gripper_joint_2" type="continuous">
+    <joint name="${tf_prefix}right_gripper_joint_2" type="fixed">
       <origin xyz="0.0213495 -0.0130363 0" rpy="0 0 0" />
       <parent link="${tf_prefix}right_gripper_link_1" />
       <child link="${tf_prefix}right_gripper_link_2" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
     <!-- <joint name="right_gripper_joint_3_dummy" type="fixed">
@@ -438,36 +457,28 @@
           <child link="right_gripper_link_3_dummy"/>
         </joint> -->
 
-    <joint name="${tf_prefix}right_gripper_joint_4" type="continuous">
+    <joint name="${tf_prefix}right_gripper_joint_4" type="fixed">
       <origin xyz="0.0047151 -0.0208481 -5.8e-06" rpy="0 0 0" />
       <parent link="${tf_prefix}right_gripper_link_2" />
       <child link="${tf_prefix}right_gripper_link_4" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
-    <joint name="${tf_prefix}right_gripper_joint_5" type="continuous">
+    <joint name="${tf_prefix}right_gripper_joint_5" type="fixed">
       <origin xyz="0.0385916 -0.0103143 1.6e-06" rpy="0 0 0" />
       <parent link="${tf_prefix}right_gripper_link_4" />
       <child link="${tf_prefix}right_gripper_link_5" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
-    <joint name="${tf_prefix}right_gripper_joint_6" type="continuous">
+    <joint name="${tf_prefix}right_gripper_joint_6" type="fixed">
       <origin xyz="0.0059278 0.0133069 0" rpy="0 0 0" />
       <parent link="${tf_prefix}right_gripper_link_5" />
       <child link="${tf_prefix}right_gripper_link_6" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
-    <joint name="${tf_prefix}right_gripper_joint_7" type="continuous">
+    <joint name="${tf_prefix}right_gripper_joint_7" type="fixed">
       <origin xyz="-0.0156955 0.0176295 0" rpy="0 0 0" />
       <parent link="${tf_prefix}right_gripper_link_6" />
       <child link="${tf_prefix}right_gripper_link_7" />
-      <axis xyz="0 0 1.0" />
-      <limit effort="0" velocity="0" />
     </joint>
 
     <!-- <joint name="right_gripper_joint_8_dummy" type="fixed">

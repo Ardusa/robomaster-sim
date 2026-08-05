@@ -3,11 +3,9 @@ services:
     build: .
     stdin_open: true
     tty: true
-    # Passed through unset-if-unset on purpose: the launch files fail by name
-    # on an empty value, which beats defaulting to a backend or IP you didn't
-    # choose. SIM picks the backend; ROBOMASTER_IP is only needed when SIM=false.
     environment:
       - SIM=${SIM}
+      - WORLD=${WORLD}
       - ROBOMASTER_IP=${ROBOMASTER_IP}
     volumes:
       - ./ros2_ws:/root/ros2_ws

@@ -1,14 +1,42 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro">
 
+  <!-- The EP arm is two parallelogram linkages: three servo axes (arm_1_joint,
+       rod_joint, rod_3_joint) plus five bars whose angles are fixed by loop
+       closures. URDF is a kinematic tree and cannot express a closed loop, so
+       this description used to declare the bars as free joints tagged <mimic>.
+       <mimic> is not a constraint, only a hint that joint_state_publisher and
+       recent ros2_control read, and SDFormat 12 drops it outright: Gazebo
+       Fortress therefore saw eight unconstrained frictionless zero-effort
+       hinges, and gravity swung them indefinitely.
+
+       Fortress cannot express the constraint by any other route either, since
+       gz-physics' DART backend has no closed-chain support and mimic joints
+       only arrived in SDFormat 14 / Gazebo Harmonic. So every joint whose value
+       is determined by a loop closure is welded here instead. At zero the CAD
+       assembly pose is exactly consistent, so the welded result is the correct
+       assembled shape; it has no degrees of freedom left to drift, and it
+       behaves identically on every solver, physics engine and machine.
+       robot_state_publisher still publishes all of these frames.
+
+       Nothing in this stack actuates the arm anyway: ros2_control drives the
+       four wheels only. Articulating it needs a simulator that can close the
+       loops, or a description rebuilt around one serial chain per parallelogram.
+       Nominal servo ranges, kept for whoever does that: arm_1_joint
+       [-0.274, 1.384], rod_joint [-0.799, 1.731], rod_3_joint [-0.347, 1.215] rad.
+
+       Every inertia below is computed from the link's collision mesh by
+       scripts/mesh_inertia.py; edit scripts/inertia_manifest.txt and rerun it
+       rather than hand-editing these numbers. -->
+
   <xacro:macro name="arm" params="tf_prefix=''">
 
     <link name="${tf_prefix}arm_1_link">
       <inertial>
-        <origin xyz="-0.0005586 0.023592 0.0011729" rpy="0 0 0" />
+        <origin xyz="0.01205666 0.02230166 0.05887051" rpy="0 0 0" />
         <mass value="0.056" />
-        <inertia ixx="0.0156113" ixy="2.43e-05" ixz="1.8e-06" iyy="0.0161553" iyz="-0.0023011"
-          izz="0.0018092" />
+        <inertia ixx="8.49512e-05" ixy="-3.95594e-07" ixz="-2.11241e-06" iyy="6.62308e-05"
+          iyz="-1.5812e-06" izz="2.53281e-05" />
       </inertial>
       <visual name="arm_1">
         <origin xyz="0.0073108 0.0184816 0.0437162" rpy="0 0 0" />
@@ -39,10 +67,10 @@
 
     <link name="${tf_prefix}arm_2_link">
       <inertial>
-        <origin xyz="0.0222614 -0.0202749 -0.008504" rpy="0 0 0" />
+        <origin xyz="0.03671166 -0.02033782 0.00391168" rpy="0 0 0" />
         <mass value="0.08" />
-        <inertia ixx="0.0118624" ixy="1e-06" ixz="-3e-07" iyy="0.0041691" iyz="0.0031106"
-          izz="0.0101456" />
+        <inertia ixx="6.08608e-05" ixy="-6.10762e-08" ixz="6.09701e-05" iyy="0.000165693"
+          iyz="3.71217e-08" izz="0.000151413" />
       </inertial>
       <visual name="arm_2">
         <origin xyz="0.0256122 -0.020134 -0.001308" rpy="0 0 0" />
@@ -89,9 +117,10 @@
 
     <link name="${tf_prefix}arm_base_link">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
+        <origin xyz="-0.001910214 -0.001483998 0.02477027" rpy="0 0 0" />
         <mass value="0.3" />
-        <inertia ixx="0.0023" ixy="0" ixz="0" iyy="0.0025" iyz="0" izz="0.00072" />
+        <inertia ixx="0.000694227" ixy="2.66773e-07" ixz="-8.3416e-07" iyy="0.000216367"
+          iyz="2.73943e-06" izz="0.000757545" />
       </inertial>
       <visual name="arm_base">
         <origin xyz="-0.0008983 -0.0029745 -2.44e-05" rpy="0 0 0" />
@@ -125,20 +154,23 @@
       </collision>
     </link>
 
+    <!-- Geometryless frames get a nominal point-mass inertia: small enough not
+         to perturb the body they weld into, large enough to stay positive
+         definite. -->
     <link name="${tf_prefix}end_point_link">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <mass value="0.001" />
-        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+        <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
       </inertial>
     </link>
-    
+
     <link name="${tf_prefix}endpoint_bracket_link">
       <inertial>
-        <origin xyz="0.0116468 -0.0288044 0.0041342" rpy="0 0 0" />
+        <origin xyz="0.0117106 -0.03068662 -0.002782978" rpy="0 0 0" />
         <mass value="0.028" />
-        <inertia ixx="0.0004413" ixy="0.0001147" ixz="2.69e-05" iyy="0.0008301" iyz="-2.89e-05"
-          izz="0.0008237" />
+        <inertia ixx="1.31087e-05" ixy="3.88132e-07" ixz="-4.6124e-07" iyy="6.63736e-06"
+          iyz="2.12334e-06" izz="1.36971e-05" />
       </inertial>
       <visual name="endpoint_bracket">
         <origin xyz="0.0071657 -0.0245846 0.0008407" rpy="0 0 0" />
@@ -162,9 +194,10 @@
 
     <link name="${tf_prefix}rod_1_link">
       <inertial>
-        <origin xyz="-0.0477809 0 0.0272644" rpy="0 0 0" />
+        <origin xyz="-0.04802565 0 0.03246364" rpy="0 0 0" />
         <mass value="0.012" />
-        <inertia ixx="0.0016031" ixy="0" ixz="0" iyy="0.0004085" iyz="0.000657" izz="0.0011959" />
+        <inertia ixx="4.97769e-06" ixy="0" ixz="8.37868e-06" iyy="2.02607e-05" iyz="0"
+          izz="1.53005e-05" />
       </inertial>
       <visual name="rod_1">
         <origin xyz="-0.0479737 0 0.0301898" rpy="0 0 0" />
@@ -192,9 +225,10 @@
 
     <link name="${tf_prefix}rod_2_link">
       <inertial>
-        <origin xyz="0.0011528 0 0.0549123" rpy="0 0 0" />
+        <origin xyz="-0.003175907 0 0.05794559" rpy="0 0 0" />
         <mass value="0.012" />
-        <inertia ixx="0.0016147" ixy="0" ixz="0" iyy="0.0015792" iyz="-3.39e-05" izz="3.69e-05" />
+        <inertia ixx="2.00286e-05" ixy="0" ixz="-5.50685e-07" iyy="2.03218e-05" iyz="0"
+          izz="3.10675e-07" />
       </inertial>
       <visual name="rod_2">
         <origin xyz="-0.0012722 0 0.0561361" rpy="0 0 0" />
@@ -223,9 +257,10 @@
 
     <link name="${tf_prefix}rod_3_link">
       <inertial>
-        <origin xyz="-0.0003574 9.5e-06 0.0001674" rpy="0 0 0" />
+        <origin xyz="-0.003713694 9.504091e-06 0.06138324" rpy="0 0 0" />
         <mass value="0.012" />
-        <inertia ixx="0.0059201" ixy="0" ixz="0" iyy="0.005887" iyz="1.87e-05" izz="3.45e-05" />
+        <inertia ixx="2.01022e-05" ixy="0" ixz="-4.94278e-07" iyy="2.0411e-05" iyz="0"
+          izz="3.26386e-07" />
       </inertial>
       <visual name="rod_3">
         <origin xyz="-0.0017304 0 0.0633558" rpy="0 0 0" />
@@ -245,9 +280,10 @@
 
     <link name="${tf_prefix}rod_link">
       <inertial>
-        <origin xyz="-8.11e-05 0.0023793 8.58e-05" rpy="0 0 0" />
+        <origin xyz="-0.02068464 0.002379249 0.008827015" rpy="0 0 0" />
         <mass value="0.011" />
-        <inertia ixx="0.0009103" ixy="0" ixz="0" iyy="0.0002029" iyz="0.0003431" izz="0.0007136" />
+        <inertia ixx="1.3148e-06" ixy="0" ixz="1.84731e-06" iyy="5.21407e-06" iyz="0"
+          izz="3.97845e-06" />
       </inertial>
       <visual name="rod">
         <origin xyz="-0.0261857 0.0022566 0.0121229" rpy="0 0 0" />
@@ -278,15 +314,10 @@
 
     <link name="${tf_prefix}triangle_link">
       <inertial>
-        <origin xyz="0.1417841 0.0321051 -0.1257179" rpy="0 0 0" />
+        <origin xyz="-0.01120213 0 0.0129844" rpy="0 0 0" />
         <mass value="0.009" />
-        <!-- Placeholder, not measured. The exported tensor here was physically
-             impossible (principal moments failed the triangle inequality) and
-             ~1000x too large for a 9g part, so Gazebo rejected the whole model.
-             This is a cosmetic linkage that nothing drives; if the arm ever
-             needs real dynamics, re-export this about the link's own centre
-             of mass. -->
-        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+        <inertia ixx="6.19224e-07" ixy="0" ixz="-1.62891e-08" iyy="2.7415e-06" iyz="0"
+          izz="2.13638e-06" />
       </inertial>
       <visual name="triangle">
         <origin xyz="-0.0095953 0 0.0131247" rpy="0 0 0" />
@@ -304,12 +335,11 @@
       </collision>
     </link>
 
-    <joint name="${tf_prefix}arm_1_joint" type="revolute">
+    <!-- Servo axis. Welded: rod_2_link and triangle_link close loops around it. -->
+    <joint name="${tf_prefix}arm_1_joint" type="fixed">
       <origin xyz="0.0103961 -0.0255713 0.030741" rpy="0 0 0" />
       <parent link="${tf_prefix}arm_base_link" />
       <child link="${tf_prefix}arm_1_link" />
-      <axis xyz="0.0 1.0 0" />
-      <limit effort="0" velocity="0" lower="-0.274" upper="1.384" />
     </joint>
 
     <!-- <joint name="arm_2_dummy" type="floating">
@@ -318,13 +348,11 @@
       <child link="arm_2_dummy"/>
     </joint> -->
 
-    <joint name="${tf_prefix}arm_2_joint" type="continuous">
+    <!-- Was: mimic of rod_3_joint, multiplier -1. -->
+    <joint name="${tf_prefix}arm_2_joint" type="fixed">
       <origin xyz="0.0018704 0.0438659 0.1210238" rpy="0 0 0" />
       <parent link="${tf_prefix}arm_1_link" />
       <child link="${tf_prefix}arm_2_link" />
-      <axis xyz="0.0 1.0 0" />
-      <limit effort="0" velocity="0" />
-      <mimic joint="${tf_prefix}rod_3_joint" multiplier="-1.0" offset="0.0" />
     </joint>
 
     <!-- <joint name="arm_base_attachment_joint" type="fixed">
@@ -351,13 +379,11 @@
       <child link="${tf_prefix}end_point_link" />
     </joint>
 
-    <joint name="${tf_prefix}endpoint_bracket_joint" type="continuous">
+    <!-- Was: mimic of rod_joint, multiplier -1. -->
+    <joint name="${tf_prefix}endpoint_bracket_joint" type="fixed">
       <origin xyz="0.1058557 0.006752 -0.0561093" rpy="0 0 0" />
       <parent link="${tf_prefix}arm_2_link" />
       <child link="${tf_prefix}endpoint_bracket_link" />
-      <axis xyz="0.0 1.0 0" />
-      <mimic joint="${tf_prefix}rod_joint" multiplier="-1.0" offset="0.0" />
-      <!-- <limit effort="0" velocity="0"/> -->
     </joint>
 
     <!-- <joint name="rod_1_dummy" type="floating">
@@ -366,13 +392,11 @@
       <child link="rod_1_dummy"/>
     </joint> -->
 
-    <joint name="${tf_prefix}rod_1_joint" type="continuous">
+    <!-- Was: mimic of rod_joint, multiplier 1. -->
+    <joint name="${tf_prefix}rod_1_joint" type="fixed">
       <origin xyz="0.0134583 -0.0540971 0.0213068" rpy="0 -0.021293 0" />
       <parent link="${tf_prefix}endpoint_bracket_link" />
       <child link="${tf_prefix}rod_1_link" />
-      <axis xyz="0.0 1.0 0" />
-      <mimic joint="${tf_prefix}rod_joint" multiplier="1.0" offset="0.0" />
-      <!-- <limit effort="0" velocity="0"/> -->
     </joint>
 
     <!-- <joint name="rod_2_dummy" type="floating">
@@ -381,13 +405,11 @@
       <child link="rod_2_dummy"/>
     </joint> -->
 
-    <joint name="${tf_prefix}rod_2_joint" type="continuous">
+    <!-- Was: mimic of arm_1_joint, multiplier 1. -->
+    <joint name="${tf_prefix}rod_2_joint" type="fixed">
       <origin xyz="-0.0224276 -0.0290701 0.0554782" rpy="0 -0.0094248 0" />
       <parent link="${tf_prefix}arm_base_link" />
       <child link="${tf_prefix}rod_2_link" />
-      <axis xyz="0.0 1.0 0" />
-      <mimic joint="${tf_prefix}arm_1_joint" multiplier="1.0" offset="0.0" />
-      <!-- <limit effort="0" velocity="0"/> -->
     </joint>
 
     <!-- <joint name="rod_3_dummy" type="floating">
@@ -396,20 +418,19 @@
       <child link="rod_3_dummy"/>
     </joint> -->
 
-    <joint name="${tf_prefix}rod_3_joint" type="revolute">
+    <!-- Servo axis. Welded: arm_2_link closes a loop around it. -->
+    <joint name="${tf_prefix}rod_3_joint" type="fixed">
       <origin xyz="-0.042397 0.0004533 0.0223131" rpy="0 0 0" />
       <parent link="${tf_prefix}rod_link" />
       <child link="${tf_prefix}rod_3_link" />
-      <axis xyz="0.0 1.0 0" />
-      <limit effort="0" velocity="0" lower="-0.34732" upper="1.21475" />
     </joint>
 
-    <joint name="${tf_prefix}rod_joint" type="revolute">
+    <!-- Servo axis. Welded: rod_1_link and endpoint_bracket_link close loops
+         around it. -->
+    <joint name="${tf_prefix}rod_joint" type="fixed">
       <origin xyz="0.009805 0.0214241 0.0319234" rpy="0 0 0" />
       <parent link="${tf_prefix}arm_base_link" />
       <child link="${tf_prefix}rod_link" />
-      <axis xyz="0.0 1.0 0" />
-      <limit effort="0" velocity="0" lower="-0.79936" upper="1.73137" />
     </joint>
 
     <!-- <joint name="triangle_1_dummy" type="floating">
@@ -424,12 +445,11 @@
       <child link="triangle_2_dummy"/>
     </joint> -->
 
-    <joint name="${tf_prefix}triangle_joint" type="continuous">
+    <!-- Was: mimic of arm_1_joint, multiplier -1. -->
+    <joint name="${tf_prefix}triangle_joint" type="fixed">
       <origin xyz="0.0020224 -0.007103 0.1212334" rpy="0 0.2502802 0" />
       <parent link="${tf_prefix}arm_1_link" />
       <child link="${tf_prefix}triangle_link" />
-      <axis xyz="0.0 1.0 0" />
-      <mimic joint="${tf_prefix}arm_1_joint" multiplier="-1.0" offset="0.0" />
     </joint>
 
   </xacro:macro>
