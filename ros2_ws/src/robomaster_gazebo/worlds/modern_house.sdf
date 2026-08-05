@@ -31,11 +31,11 @@
       <shadows>true</shadows>
     </scene>
 
-    <gui>
-      <camera name="overview">
-        <pose>11 -14 12 0 0.55 2.25</pose>
-      </camera>
-    </gui>
+    <!-- No <gui> block on purpose. Fortress ignores the classic
+         <gui><camera> pose, and a MinimalScene plugin here would set the
+         viewpoint but replace Gazebo's whole default GUI with itself, taking the
+         entity tree and the play/pause controls with it. sim.launch.py sets the
+         opening viewpoint through Gazebo's gui-config option instead. -->
 
     <light name="sun" type="directional">
       <pose>0 0 12 0 0 0</pose>
@@ -94,16 +94,29 @@
 
     <!-- The architectural shell uses static primitive geometry. It has no
          inertial blocks because it never participates as a dynamic body. -->
+    <!-- Where sim.launch.py drops the robot: on the entry apron outside the
+         south doorway, centred on the 1.8 m opening between wall_south_west
+         (x<=-0.9) and wall_south_east (x>=0.9), yawed +90 deg so the chassis
+         and camera face north through the door into the hall. The origin is not
+         usable here: the hall console's cabinet sits across it. -->
+    <frame name="robot_spawn">
+      <pose>0 -6.2 0.1 0 0 1.5708</pose>
+    </frame>
+
     <model name="house_shell">
       <static>true</static>
 
+      <!-- The slab runs 3 m past the south wall so the entry apron is part of
+           the same collision box as the interior floor. A separate apron slab
+           butted against this one would put a coplanar contact seam directly in
+           the doorway, which the wheels have to cross on every run. -->
       <link name="floor">
-        <pose>0 0 -0.06 0 0 0</pose>
+        <pose>0 -1.5 -0.06 0 0 0</pose>
         <collision name="collision">
-          <geometry><box><size>14 10 0.12</size></box></geometry>
+          <geometry><box><size>14 13 0.12</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry><box><size>14 10 0.12</size></box></geometry>
+          <geometry><box><size>14 13 0.12</size></box></geometry>
           <material>
             <ambient>0.34 0.31 0.27 1</ambient>
             <diffuse>0.42 0.37 0.31 1</diffuse>
@@ -239,6 +252,22 @@
          collision seams under the robot. -->
     <model name="floor_accents">
       <static>true</static>
+      <!-- Reads the exterior portion of the floor slab as paving rather than
+           interior flooring. Visual only, so the doorway stays seamless. -->
+      <link name="entry_apron">
+        <pose>0 -6.5 0.006 0 0 0</pose>
+        <visual name="visual">
+          <geometry><box><size>14 3 0.012</size></box></geometry>
+          <material><ambient>0.40 0.40 0.42 1</ambient><diffuse>0.52 0.52 0.54 1</diffuse></material>
+        </visual>
+      </link>
+      <link name="entry_walk">
+        <pose>0 -6.4 0.014 0 0 0</pose>
+        <visual name="visual">
+          <geometry><box><size>1.8 2.8 0.008</size></box></geometry>
+          <material><ambient>0.56 0.54 0.50 1</ambient><diffuse>0.70 0.68 0.62 1</diffuse></material>
+        </visual>
+      </link>
       <link name="living_rug">
         <pose>4 0.2 0.006 0 0 0</pose>
         <visual name="visual">

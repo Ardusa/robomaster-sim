@@ -10,7 +10,11 @@ controller_manager inside the Gazebo process, so it exists only once the robot
 is spawned. bringup's spawners wait for it.
 """
 
+import glob
+import math
 import os
+import tempfile
+from xml.etree import ElementTree
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -37,8 +41,7 @@ def _default_world() -> str:
     )
 
 
-def _gz(context, *args, **kwargs):
-    ros_gz_sim = get_package_share_directory("ros_gz_sim")
+def _resolve_world(context) -> str:
     gazebo_share = get_package_share_directory("robomaster_gazebo")
 
     # Launch propagates configurations into included descriptions, so bringup's
@@ -65,18 +68,126 @@ def _gz(context, *args, **kwargs):
             )
         world = shipped
 
+    return world
+
+
+def _spawn_pose(world: str) -> list:
+    """Spawn coordinates from the world's robot_spawn frame, else the origin.
+
+    A world knows where its own floor is clear; the origin is furniture in one of
+    ours. Declaring it in the world keeps that with the geometry it depends on,
+    rather than in a launch argument that has to be re-set per world.
+
+    A world that declares no such frame falls back to the origin, but one that
+    cannot be parsed is an error. Gazebo's XML parser is looser than Python's and
+    will happily load a world this cannot read — silently dropping the robot at
+    the origin, which is inside the furniture in at least one of our worlds.
+    """
+    try:
+        root = ElementTree.parse(world).getroot()
+    except (ElementTree.ParseError, OSError) as exc:
+        raise RuntimeError(
+            f"could not parse world '{world}' to find its robot_spawn frame: {exc}. "
+            f"Gazebo may still load it, so check for XML that only a strict parser "
+            f"rejects (a '--' inside a comment is the usual culprit)."
+        ) from exc
+
+    pose = root.find("./world/frame[@name='robot_spawn']/pose")
+    if pose is None or not pose.text:
+        return ["0", "0", "0.1", "0"]
+
+    parts = pose.text.split()
+    if len(parts) != 6:
+        raise RuntimeError(
+            f"world '{world}' has a robot_spawn frame whose pose is "
+            f"'{pose.text.strip()}'; it needs six values, 'x y z roll pitch yaw'."
+        )
+    x, y, z, _roll, _pitch, yaw = parts
+    return [x, y, z, yaw]
+
+
+def _gui_config(world: str) -> str:
+    """A gui.config whose opening viewpoint frames the world's spawn point.
+
+    Worlds cannot do this themselves: Fortress ignores the classic
+    <gui><camera> pose, and the MinimalScene plugin that does honour a
+    camera_pose replaces Gazebo's entire default GUI when it appears in a world,
+    which costs the entity tree and the run controls. So Gazebo's own installed
+    default is patched instead, leaving every other panel exactly as shipped and
+    staying correct across Gazebo versions rather than vendoring a copy.
+
+    Returns "" when the default cannot be found, in which case the caller leaves
+    Gazebo to its own configuration.
+    """
+    default = next(iter(sorted(
+        glob.glob("/usr/share/ignition/ignition-gazebo*/gui/gui.config"))), "")
+    if not default:
+        return ""
+
+    x, y, z, yaw = (float(v) for v in _spawn_pose(world))
+    # Behind and above the robot, looking down its own heading, so the view
+    # starts on the robot with whatever it faces beyond it.
+    back, up = 5.0, 3.5
+    camera = (
+        f"{x - back * math.cos(yaw):.4g} {y - back * math.sin(yaw):.4g} {z + up:.4g} "
+        f"0 {math.atan2(up, back):.4g} {yaw:.4g}"
+    )
+
+    try:
+        text = open(default, encoding="utf-8").read()
+    except OSError:
+        return ""
+
+    start = text.find("<camera_pose>")
+    if start < 0:
+        return ""
+    end = text.index("</camera_pose>", start) + len("</camera_pose>")
+    patched = text[:start] + f"<camera_pose>{camera}</camera_pose>" + text[end:]
+
+    handle, path = tempfile.mkstemp(prefix="robomaster_gui_", suffix=".config")
+    with os.fdopen(handle, "w", encoding="utf-8") as out:
+        out.write(patched)
+    return path
+
+
+def _spawn(context, *args, **kwargs):
+    x, y, z, yaw = _spawn_pose(_resolve_world(context))
+    return [
+        Node(
+            package="ros_gz_sim",
+            executable="create",
+            arguments=[
+                "-topic", "robot_description",
+                "-name", "robomaster_ep",
+                "-x", x, "-y", y, "-z", z, "-Y", yaw,
+            ],
+            output="screen",
+        )
+    ]
+
+
+def _gz(context, *args, **kwargs):
+    ros_gz_sim = get_package_share_directory("ros_gz_sim")
+    world = _resolve_world(context)
+
     # Engines are per-process, not global: the GUI's Ogre 1.x path aborts on an
     # AxisAlignedBox assertion inside its render thread, which is a black window
     # and an empty entity tree even on empty.sdf, so the GUI needs ogre2. The
     # server stays on ogre, the offscreen path the camera is known to render
     # sensors through with no GPU passthrough in the container.
-    gz_args = f"-r --render-engine-server ogre --render-engine-gui ogre2 {world}"
+    gz_args = "-r --render-engine-server ogre --render-engine-gui ogre2"
 
     # headless:=true runs the server with no GUI, which is the only way this is
     # bearable without GPU passthrough (see the Makefile's platform warning).
     # Sensors still render offscreen, so the camera works either way.
     if LaunchConfiguration("headless").perform(context) == "true":
         gz_args += " -s --headless-rendering"
+    else:
+        gui_config = _gui_config(world)
+        if gui_config:
+            gz_args += f" --gui-config {gui_config}"
+
+    gz_args += f" {world}"
 
     return [
         IncludeLaunchDescription(
@@ -89,13 +200,6 @@ def _gz(context, *args, **kwargs):
 def generate_launch_description():
     gazebo_share = get_package_share_directory("robomaster_gazebo")
     description_share = get_package_share_directory("robomaster_description")
-
-    spawn = Node(
-        package="ros_gz_sim",
-        executable="create",
-        arguments=["-topic", "robot_description", "-name", "robomaster_ep", "-z", "0.1"],
-        output="screen",
-    )
 
     # Gazebo publishes the camera on its own transport; these bridge it onto
     # the ROS topics apriltag_node reads. Names match camera_node.py's, so
@@ -145,7 +249,8 @@ def generate_launch_description():
             ),
             OpaqueFunction(function=_gz),
             clock_bridge,
-            TimerAction(period=4.0, actions=[spawn]),  # let Gazebo come up first
+            # Let Gazebo come up first; the spawn pose comes from the world.
+            TimerAction(period=4.0, actions=[OpaqueFunction(function=_spawn)]),
             TimerAction(period=8.0, actions=[camera_bridge, camera_info_bridge]),
         ]
     )

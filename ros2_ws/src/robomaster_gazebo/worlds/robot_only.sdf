@@ -33,6 +33,13 @@
             name="gz::sim::systems::Contact">
     </plugin>
 
+    <!-- Read by sim.launch.py. Nothing is in the way here, so this is just the
+         origin — declared anyway so the mechanism is visible in the simple world
+         rather than looking like something only the furnished one needs. -->
+    <frame name="robot_spawn">
+      <pose>0 0 0.1 0 0 0</pose>
+    </frame>
+
     <light name="sun" type="directional">
       <pose>0 0 10 0 0 0</pose>
       <cast_shadows>true</cast_shadows>
