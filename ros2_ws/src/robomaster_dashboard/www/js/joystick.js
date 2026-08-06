@@ -1,4 +1,4 @@
-/** Dual canvas sticks: interactive mecanum + read-only arm preview. */
+/** Dual canvas sticks: mecanum drive + arm jog. */
 
 const DEADZONE = 0.12;
 

@@ -55,16 +55,16 @@
           <canvas id="drive-stick" width="180" height="180"></canvas>
         </div>
         <div class="stick-block">
-          <div class="stick-label">Arm <span class="tag">preview</span></div>
+          <div class="stick-label">Arm</div>
           <canvas id="arm-stick" width="180" height="180"></canvas>
-          <p class="hint stick-hint">Right-stick visualizer — arm teleop wires in later.</p>
+          <p class="hint stick-hint">Right / left = reach · up / down = raise</p>
         </div>
       </div>
       <div class="scales">
         <label>Speed <input id="speed" type="range" min="0.05" max="1" step="0.05" /></label>
         <label>Turn <input id="turn" type="range" min="0.05" max="2" step="0.05" /></label>
       </div>
-      <p id="gamepad-label" class="hint">No gamepad — use the mecanum stick or plug in a controller.</p>
+      <p id="gamepad-label" class="hint">No gamepad — drag the sticks, or plug in a controller.</p>
 
       <h2>Arm Setpoints</h2>
       <div id="arm-readout" class="readout">

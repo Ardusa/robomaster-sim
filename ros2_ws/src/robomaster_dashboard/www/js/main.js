@@ -17,9 +17,8 @@ import { createRobot3d } from "./robot3d.js";
   const driveJoy = createJoystick(document.getElementById("drive-stick"), {
     interactive: true,
   });
-  // Read-only preview for the separate arm-teleop agent's right stick.
   const armJoy = createJoystick(document.getElementById("arm-stick"), {
-    interactive: false,
+    interactive: true,
   });
 
   let ws = null;
@@ -28,15 +27,7 @@ import { createRobot3d } from "./robot3d.js";
   let gamepadIndex = null;
   let lastArmMs = 0;
   const SEND_HZ = 20;
-
-  function sendArm(action) {
-    const now = performance.now();
-    if (now - lastArmMs < 200) return;
-    lastArmMs = now;
-    send({ type: "arm", action });
-  }
-
-  const stateListeners = [];
+  const ARM_JOG_MS = 180;
 
   function setStatus(text, ok) {
     statusEl.textContent = text;
@@ -58,6 +49,39 @@ import { createRobot3d } from "./robot3d.js";
   function sendTwist(lx, ly, az) {
     send({ type: "twist", lx, ly, az, speed, turn });
   }
+
+  function sendArm(action) {
+    const now = performance.now();
+    if (now - lastArmMs < ARM_JOG_MS) return;
+    lastArmMs = now;
+    send({ type: "arm", action });
+  }
+
+  /** Canvas stick → arm workspace: right = +x (reach), up = +z (raise). */
+  function jogArmFromStick(sx, sy) {
+    const ax = applyDeadzone(sx);
+    const az = applyDeadzone(-sy);
+    if (ax === 0 && az === 0) return;
+    if (Math.abs(ax) >= Math.abs(az)) {
+      sendArm(ax > 0 ? "x+" : "x-");
+    } else {
+      sendArm(az > 0 ? "z+" : "z-");
+    }
+  }
+
+  /** LT/RT (and D-pad L/R) for yaw — right stick is reserved for the arm. */
+  function yawFromPad(pad) {
+    const lt = pad.buttons[6]?.value ?? (pad.buttons[6]?.pressed ? 1 : 0);
+    const rt = pad.buttons[7]?.value ?? (pad.buttons[7]?.pressed ? 1 : 0);
+    let az = 0;
+    if (lt > 0.1) az += lt;
+    if (rt > 0.1) az -= rt;
+    if (pad.buttons[14]?.pressed) az = 1; // D-pad left → +yaw (CCW)
+    if (pad.buttons[15]?.pressed) az = -1; // D-pad right
+    return applyDeadzone(az);
+  }
+
+  const stateListeners = [];
 
   const armPanel = createArmPanel({
     presetGrid: document.getElementById("preset-grid"),
@@ -109,26 +133,29 @@ import { createRobot3d } from "./robot3d.js";
     if (!pad) {
       gamepadIndex = null;
       driveJoy.setLocked(false);
+      armJoy.setLocked(false);
       gamepadLabel.textContent =
-        "No gamepad — use the mecanum stick or plug in a controller.";
-      // Mouse stick: canvas y is down-positive; forward is -y.
+        "No gamepad — drag sticks · A/B/X presets · LT/RT turn when connected.";
       const lx = applyDeadzone(-driveJoy.stick.y);
       const ly = applyDeadzone(-driveJoy.stick.x);
-      armJoy.setValue(0, 0);
       if (lx === 0 && ly === 0) {
         send({ type: "stop" });
       } else {
         sendTwist(lx, ly, 0);
       }
+      jogArmFromStick(armJoy.stick.x, armJoy.stick.y);
       return;
     }
 
     driveJoy.setLocked(true);
-    gamepadLabel.textContent = `Gamepad: ${pad.id}`;
+    armJoy.setLocked(true);
+    gamepadLabel.textContent =
+      `Gamepad: ${pad.id} · left=drive · right=arm · LT/RT=turn · A/B/X=presets · LB/RB=gripper`;
+
     const lx = applyDeadzone(-(pad.axes[1] || 0));
     const ly = applyDeadzone(-(pad.axes[0] || 0));
-    const az = applyDeadzone(-(pad.axes[2] || 0));
-    // Right stick visualizer (axes 2/3). Arm command path owned by other agent.
+    const az = yawFromPad(pad);
+    // Right stick: axes[2]=X, axes[3]=Y (down-positive).
     const rax = applyDeadzone(pad.axes[2] || 0);
     const ray = applyDeadzone(pad.axes[3] || 0);
     driveJoy.setValue(-ly, -lx);
@@ -140,12 +167,17 @@ import { createRobot3d } from "./robot3d.js";
       sendTwist(lx, ly, az);
     }
 
-    // Face buttons: A=0 B=1 X=2 Y=3 on standard mapping.
+    jogArmFromStick(rax, ray);
+
+    // Face buttons: A=0 B=1 X=2 → presets (Y unused).
     if (pad.buttons[0]?.pressed) sendArm("preset_tuck");
     if (pad.buttons[1]?.pressed) sendArm("preset_reach");
     if (pad.buttons[2]?.pressed) sendArm("preset_raise");
     if (pad.buttons[4]?.pressed) sendArm("grip_open");
     if (pad.buttons[5]?.pressed) sendArm("grip_close");
+    // D-pad up/down = fine arm jog (left/right already used for yaw).
+    if (pad.buttons[12]?.pressed) sendArm("z+");
+    if (pad.buttons[13]?.pressed) sendArm("z-");
   }
 
   window.addEventListener("gamepadconnected", (e) => {
@@ -155,6 +187,7 @@ import { createRobot3d } from "./robot3d.js";
   window.addEventListener("gamepaddisconnected", () => {
     gamepadIndex = null;
     driveJoy.setLocked(false);
+    armJoy.setLocked(false);
     driveJoy.reset();
     armJoy.reset();
   });
