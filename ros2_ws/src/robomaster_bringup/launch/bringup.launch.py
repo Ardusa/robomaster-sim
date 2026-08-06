@@ -63,6 +63,7 @@ def _backends(context, *args, **kwargs):
     detection = flag("detection")
     arm = flag("arm")
     dashboard = flag("dashboard")
+    command = flag("command")
 
     # Detection needs a feed; on the real robot that means the camera node.
     if detection and sim == "false":
@@ -108,6 +109,14 @@ def _backends(context, *args, **kwargs):
 
     if detection:
         actions.append(include("robomaster_detection", "detection.launch.py"))
+
+    if command:
+        # Same world as Gazebo so zone coords match the loaded scenery.
+        cmd_args = {}
+        world = LaunchConfiguration("world").perform(context)
+        if world:
+            cmd_args["world"] = world
+        actions.append(include("robomaster_command", "command.launch.py", **cmd_args))
 
     want_video = flag("video_server") and (camera or detection or dashboard)
     if want_video:
@@ -185,6 +194,15 @@ def generate_launch_description():
                 default_value="false",
                 choices=["true", "false"],
                 description="Operator web UI on :8090 (chassis + arm teleop).",
+            ),
+            DeclareLaunchArgument(
+                "command",
+                default_value="false",
+                choices=["true", "false"],
+                description=(
+                    "Natural-language command grounding + translator "
+                    "(robomaster_command). Needed by the dashboard Command panel."
+                ),
             ),
             OpaqueFunction(function=_backends),
         ]

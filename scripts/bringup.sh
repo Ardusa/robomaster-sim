@@ -48,6 +48,8 @@ cleanup() {
      pkill -f \"[a]rm_node.py\" || true; \
      pkill -f \"[t]eleop_node.py\" || true; \
      pkill -f \"[d]ashboard_node\" || true; \
+     pkill -f \"[g]rounding_node.py\" || true; \
+     pkill -f \"[t]ranslator_node.py\" || true; \
      true"
   echo "  bringup session stopped."
 }
@@ -91,8 +93,8 @@ case "${profile}" in
     echo "  detect:    ${ANNOTATED_URL}"
     $DC exec -d robomaster-sim bash -c ": rmbringup=${session}; ${SETUP} \
       ${LAUNCH} control:=true arm:=true camera:=true detection:=true \
-      video_server:=true dashboard:=true > /tmp/bringup_stack.log 2>&1"
-    wait_ready /tmp/bringup_stack.log 'cmd_vel_mux' 'robomaster_arm' 'robomaster_dashboard'
+      video_server:=true dashboard:=true command:=true > /tmp/bringup_stack.log 2>&1"
+    wait_ready /tmp/bringup_stack.log 'cmd_vel_mux' 'robomaster_arm' 'robomaster_dashboard' 'robomaster_command_grounding'
     echo "  ready — open the dashboard (Ctrl-C tears down the stack)."
     open_url "${DASHBOARD_URL}"
     $DC exec robomaster-sim bash -c "tail -f /tmp/bringup_stack.log" || true
