@@ -32,13 +32,16 @@ R_EPS = 0.004
 GRIPPER_OPEN = 0.001
 GRIPPER_CLOSED = -0.023
 
-# Named Cartesian presets (metres in arm_base_link: +x forward, +z up).
-# Shared by teleop + dashboard so the buttons mean the same thing everywhere.
+# Named presets. "joints" entries are commanded directly (sim) so the elbow
+# actually folds; Cartesian-only IK for behind-the-shoulder poses leaves arm_2
+# near the same angle as extend (~-1.5 rad), which looks unchanged.
+# "xyz" entries stay pure Cartesian (x forward, z up in arm_base_link).
 PRESETS = {
-    # Shoulder back + elbow folded. (-0.10, 0.16) IK'd to a1≈+0.11 / a2≈-1.34,
-    # which leaves the forearm nearly as open as the home pose.
-    "tuck": (-0.15, 0.08),
-    "extend": (0.105, 0.142),  # measured useful forward pose
+    # Command joints directly: Cartesian IK for behind-chassis tips leaves the
+    # elbow near extend's angle (~-1.5). Pin arm_2 at the URDF limit so the
+    # forearm visibly folds.
+    "tuck": {"joints": (-0.35, -1.80)},
+    "extend": {"xyz": (0.105, 0.142)},
 }
 
 # Pose the sim arm is driven to at startup so jogging has room in every
@@ -51,6 +54,21 @@ def fk(arm_1: float, arm_2: float) -> Tuple[float, float]:
     x = L1 * math.sin(arm_1) + L2 * math.sin(arm_1 + arm_2)
     z = L1 * math.cos(arm_1) + L2 * math.cos(arm_1 + arm_2)
     return x, z
+
+
+def preset_cartesian(name: str) -> Tuple[float, float]:
+    """Tip (x, z) for UI labels / tether moveto."""
+    p = PRESETS[name]
+    if "joints" in p:
+        return fk(*p["joints"])
+    return p["xyz"]
+
+
+def preset_joints(name: str) -> Optional[Tuple[float, float]]:
+    p = PRESETS.get(name)
+    if p is None:
+        return None
+    return p.get("joints")
 
 
 def ik(x: float, z: float) -> Optional[Tuple[float, float]]:

@@ -2,19 +2,15 @@ import { createJoystick, applyDeadzone } from "./joystick.js";
 import { createArmPanel } from "./arm.js";
 import { createTelemetry } from "./telemetry.js";
 import { createRobot3d } from "./robot3d.js";
-import { createSnapshotFeed } from "./feeds.js";
+import { createStreamFeed } from "./feeds.js";
 
 (() => {
   const statusEl = document.getElementById("status");
   const modeEl = document.getElementById("mode");
   const primaryTitle = document.getElementById("primary-title");
   const annotatedTitle = document.getElementById("annotated-title");
-  const primaryFeed = createSnapshotFeed(document.getElementById("primary-feed"), {
-    hz: 12,
-  });
-  const annotatedFeed = createSnapshotFeed(document.getElementById("annotated-feed"), {
-    hz: 12,
-  });
+  const primaryFeed = createStreamFeed(document.getElementById("primary-feed"));
+  const annotatedFeed = createStreamFeed(document.getElementById("annotated-feed"));
   const speedEl = document.getElementById("speed");
   const turnEl = document.getElementById("turn");
   const gamepadLabel = document.getElementById("gamepad-label");

@@ -129,11 +129,11 @@
         </geometry>
         <material name="EP_up.001" />
       </visual>
+      <!-- Box pads: mesh collisions were jamming the prismatic tips in Gazebo. -->
       <collision name="left_gripper_collision">
-        <origin xyz="0.0564138 0.0172595 -0.0695631" rpy="0 0 0" />
+        <origin xyz="0.062 0.017 -0.045" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_collision.dae"
-            scale="1.0 1.0 1.0" />
+          <box size="0.025 0.012 0.02" />
         </geometry>
       </collision>
     </link>
@@ -154,10 +154,9 @@
         <material name="EP_up.001" />
       </visual>
       <collision name="right_gripper_7_collision">
-        <origin xyz="0.0561863 -0.0173908 -0.0695631" rpy="0 0 0" />
+        <origin xyz="0.062 -0.017 -0.045" rpy="0 0 0" />
         <geometry>
-          <mesh filename="package://robomaster_description/meshes/right_gripper_7_collision.dae"
-            scale="1.0 1.0 1.0" />
+          <box size="0.025 0.012 0.02" />
         </geometry>
       </collision>
     </link>

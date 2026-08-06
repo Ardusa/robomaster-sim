@@ -82,8 +82,8 @@ SPEED_BINDINGS = {
 
 # Keep in sync with robomaster_arm/scripts/arm_kinematics.py PRESETS.
 PRESETS = {
-    "preset_tuck": (-0.15, 0.08),
-    "preset_extend": (0.105, 0.142),
+    "preset_tuck": {"joints": (-0.35, -1.80), "xyz": (-0.1419, 0.0480)},
+    "preset_extend": {"xyz": (0.105, 0.142)},
 }
 
 JOG = 0.02  # metres per keypress
@@ -112,7 +112,9 @@ class TeleopNode(Node):
     def stop(self) -> None:
         self.pub.publish(Twist())
 
-    def _arm_goal(self, x: float, z: float, absolute: bool) -> None:
+    def _arm_goal(
+        self, x: float, z: float, absolute: bool, *, joints=None
+    ) -> None:
         now = time.monotonic()
         with self._lock:
             if now < self._arm_deadline:
@@ -127,6 +129,12 @@ class TeleopNode(Node):
         goal.x = x
         goal.z = z
         goal.absolute = absolute
+        if joints is not None:
+            goal.use_joints = True
+            goal.arm_1 = float(joints[0])
+            goal.arm_2 = float(joints[1])
+        else:
+            goal.use_joints = False
         fut = self.move_arm.send_goal_async(goal)
 
         def _clear():
@@ -189,8 +197,9 @@ class TeleopNode(Node):
             elif binding == "arm_z-":
                 self._arm_goal(0.0, -JOG, False)
             elif binding.startswith("preset_"):
-                x, z = PRESETS[binding]
-                self._arm_goal(x, z, True)
+                p = PRESETS[binding]
+                x, z = p["xyz"]
+                self._arm_goal(x, z, True, joints=p.get("joints"))
             elif binding == "grip_open":
                 self._gripper(True)
             elif binding == "grip_close":

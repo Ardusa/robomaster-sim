@@ -117,7 +117,8 @@ def _backends(context, *args, **kwargs):
                 package="web_video_server",
                 executable="web_video_server",
                 name="web_video_server",
-                output="screen",
+                output="log",
+                arguments=["--ros-args", "--log-level", "warn"],
                 parameters=[{"port": 8080, "use_sim_time": sim == "true"}],
             )
         )

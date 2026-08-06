@@ -29,16 +29,20 @@ from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import JointState
-from std_msgs.msg import String
+from std_msgs.msg import Float64MultiArray, String
 
 from robomaster_arm.action import MoveArm, SetGripper
 from robomaster_arm.msg import ArmState, GripperState
 
 # Keep in sync with robomaster_arm/scripts/arm_kinematics.py PRESETS.
+# Tuck is joint-space (elbow must fold); xyz is fk(joints) for UI labels.
 PRESETS = {
-    "tuck": (-0.15, 0.08),
-    "extend": (0.105, 0.142),
+    "tuck": {"joints": (-0.35, -1.80), "xyz": (-0.1419, 0.0480)},
+    "extend": {"xyz": (0.105, 0.142)},
 }
+# Keep in sync with robomaster_arm arm_kinematics.GRIPPER_*.
+GRIPPER_OPEN = 0.001
+GRIPPER_CLOSED = -0.023
 JOG = 0.02
 DEFAULT_SPEED = 0.3
 DEFAULT_TURN = 0.8
@@ -63,6 +67,11 @@ class DashboardNode(Node):
         self._pub = self.create_publisher(Twist, "/cmd_vel_teleop", 1)
         self._move_arm = ActionClient(self, MoveArm, "/robomaster_arm/move_arm")
         self._set_gripper = ActionClient(self, SetGripper, "/robomaster_arm/set_gripper")
+        # Sim fallback: action client discovery from a worker thread is flaky
+        # next to the asyncio spin_once loop, so command the controller directly.
+        self._gripper_cmd = self.create_publisher(
+            Float64MultiArray, "/gripper_controller/commands", 10
+        )
 
         self._lock = threading.Lock()
         self._arm_deadline = 0.0
@@ -226,7 +235,14 @@ class DashboardNode(Node):
         self._pub.publish(Twist())
         self._note_cmd()
 
-    def _arm_goal(self, x: float, z: float, absolute: bool) -> None:
+    def _arm_goal(
+        self,
+        x: float,
+        z: float,
+        absolute: bool,
+        *,
+        joints: Optional[tuple] = None,
+    ) -> None:
         now = time.monotonic()
         with self._lock:
             if now < self._arm_deadline:
@@ -243,6 +259,12 @@ class DashboardNode(Node):
         goal.x = float(x)
         goal.z = float(z)
         goal.absolute = bool(absolute)
+        if joints is not None:
+            goal.use_joints = True
+            goal.arm_1 = float(joints[0])
+            goal.arm_2 = float(joints[1])
+        else:
+            goal.use_joints = False
         fut = self._move_arm.send_goal_async(goal)
 
         def _clear() -> None:
@@ -264,8 +286,32 @@ class DashboardNode(Node):
         fut.add_done_callback(_on_goal)
 
     def _gripper(self, open_cmd: bool) -> None:
-        # Discovery is driven by the asyncio spin_once loop; a short wait here
-        # is only a readiness gate (same pattern as move_arm).
+        target = GRIPPER_OPEN if open_cmd else GRIPPER_CLOSED
+        self.get_logger().info(
+            "gripper: " + ("open" if open_cmd else "close") + f" ({target})"
+        )
+        if self._sim:
+            # Same value on both joints; URDF axes are opposite (±Y).
+            self._gripper_cmd.publish(Float64MultiArray(data=[target, target]))
+            with self._lock:
+                self._joints["gripper_m_joint"] = target
+                self._joints["gripper_r_joint"] = target
+                self._authoritative_joints.add("gripper_m_joint")
+                self._authoritative_joints.add("gripper_r_joint")
+                self._gripper_state = {
+                    "state": int(GripperState.OPEN if open_cmd else GripperState.CLOSED),
+                    "opening": float(target),
+                }
+            # Still notify arm_node so its GripperState stays consistent.
+            if self._set_gripper.server_is_ready():
+                goal = SetGripper.Goal()
+                goal.command = (
+                    SetGripper.Goal.OPEN if open_cmd else SetGripper.Goal.CLOSE
+                )
+                goal.force_level = 1
+                self._set_gripper.send_goal_async(goal)
+            return
+
         if not self._set_gripper.server_is_ready():
             if not self._set_gripper.wait_for_server(timeout_sec=2.0):
                 self.get_logger().warning("set_gripper action not available")
@@ -273,21 +319,7 @@ class DashboardNode(Node):
         goal = SetGripper.Goal()
         goal.command = SetGripper.Goal.OPEN if open_cmd else SetGripper.Goal.CLOSE
         goal.force_level = 1
-        fut = self._set_gripper.send_goal_async(goal)
-
-        def _on_goal(f) -> None:
-            try:
-                gh = f.result()
-            except Exception as exc:  # noqa: BLE001
-                self.get_logger().warning(f"gripper send failed: {exc}")
-                return
-            if gh is None or not gh.accepted:
-                self.get_logger().warning("gripper goal rejected")
-
-        fut.add_done_callback(_on_goal)
-        self.get_logger().info(
-            "gripper: " + ("open" if open_cmd else "close")
-        )
+        self._set_gripper.send_goal_async(goal)
 
     def handle_arm(self, action: str) -> None:
         if action == "x+":
@@ -301,8 +333,9 @@ class DashboardNode(Node):
         elif action.startswith("preset_"):
             name = action.removeprefix("preset_")
             if name in PRESETS:
-                x, z = PRESETS[name]
-                self._arm_goal(x, z, True)
+                p = PRESETS[name]
+                x, z = p["xyz"]
+                self._arm_goal(x, z, True, joints=p.get("joints"))
         elif action == "grip_open":
             self._gripper(True)
         elif action == "grip_close":
@@ -340,7 +373,9 @@ class DashboardNode(Node):
                     "title": "Annotated Detections",
                 },
             ],
-            "presets": {name: {"x": xz[0], "z": xz[1]} for name, xz in PRESETS.items()},
+            "presets": {
+                name: {"x": p["xyz"][0], "z": p["xyz"][1]} for name, p in PRESETS.items()
+            },
             "arm_limits": dict(ARM_LIMITS),
             "speed": DEFAULT_SPEED,
             "turn": DEFAULT_TURN,

@@ -52,6 +52,7 @@ class ArmNode(Node):
         self._arm_1 = 0.0
         self._arm_2 = 0.0
         self._gripper = GRIPPER_OPEN
+        self._gripper_target = GRIPPER_OPEN
         self._moving = False
         self._gripper_state = GripperState.OPEN
 
@@ -78,6 +79,9 @@ class ArmNode(Node):
             # that pose as soon as the controller is listening.
             self._homed = False
             self._home_timer = self.create_timer(0.5, self._try_home)
+            # Hold last gripper command — a single publish is easy to miss
+            # before the controller is fully subscribed.
+            self.create_timer(0.1, self._hold_gripper)
         else:
             self._arm_cmd = None
             self._gripper_cmd = None
@@ -108,14 +112,21 @@ class ArmNode(Node):
         )
         self.get_logger().info(f"arm node ready (sim={self.sim})")
 
+    def _hold_gripper(self) -> None:
+        if self._gripper_cmd is None:
+            return
+        if self._gripper_cmd.get_subscription_count() < 1:
+            return
+        t = self._gripper_target
+        self._gripper_cmd.publish(Float64MultiArray(data=[t, t]))
+
     def _try_home(self) -> None:
         if self._homed or self._arm_cmd.get_subscription_count() < 1:
             return
         arm_1, arm_2, _ = solve(*self._home)
         self._arm_cmd.publish(Float64MultiArray(data=[arm_1, arm_2]))
-        self._gripper_cmd.publish(
-            Float64MultiArray(data=[GRIPPER_OPEN, GRIPPER_OPEN])
-        )
+        self._gripper_target = GRIPPER_OPEN
+        self._hold_gripper()
         self._homed = True
         self._home_timer.cancel()
         self.get_logger().info(
@@ -174,15 +185,23 @@ class ArmNode(Node):
         feedback = MoveArm.Feedback()
 
         cur_x, cur_z = fk(self._arm_1, self._arm_2)
-        if goal.absolute:
+        use_joints = bool(getattr(goal, "use_joints", False))
+        if use_joints:
+            arm_1, arm_2 = float(goal.arm_1), float(goal.arm_2)
+            target_x, target_z = fk(arm_1, arm_2)
+        elif goal.absolute:
             target_x, target_z = goal.x, goal.z
+            arm_1 = arm_2 = None
         else:
             target_x, target_z = cur_x + goal.x, cur_z + goal.z
+            arm_1 = arm_2 = None
 
         self._moving = True
         try:
             if self.sim:
-                ok, msg = self._move_sim(target_x, target_z, goal_handle, feedback)
+                ok, msg = self._move_sim(
+                    target_x, target_z, goal_handle, feedback, joints=(arm_1, arm_2)
+                )
             else:
                 ok, msg = self._move_tether(
                     target_x, target_z, goal.absolute, goal_handle, feedback
@@ -201,8 +220,13 @@ class ArmNode(Node):
             goal_handle.abort()
         return result
 
-    def _move_sim(self, target_x, target_z, goal_handle, feedback):
-        arm_1, arm_2, notes = solve(target_x, target_z)
+    def _move_sim(self, target_x, target_z, goal_handle, feedback, joints=None):
+        notes: list = []
+        if joints is not None and joints[0] is not None and joints[1] is not None:
+            arm_1, arm_2 = float(joints[0]), float(joints[1])
+            notes.append(f"joints ({arm_1:.3f}, {arm_2:.3f})")
+        else:
+            arm_1, arm_2, notes = solve(target_x, target_z)
         self._arm_cmd.publish(Float64MultiArray(data=[arm_1, arm_2]))
         # Settle against the pose actually commanded, not the raw request, so a
         # clamped goal still reports success once it arrives.
@@ -221,9 +245,17 @@ class ArmNode(Node):
             feedback.z = z
             feedback.moving = True
             goal_handle.publish_feedback(feedback)
+            # Joint goals: settle on joint error (tip error alone can look "done"
+            # while the elbow is still in the wrong configuration).
+            if joints is not None and joints[0] is not None:
+                jerr = math.hypot(self._arm_1 - arm_1, self._arm_2 - arm_2)
+                if jerr < 0.05:
+                    return True, message
+            else:
+                error = math.hypot(x - reached_x, z - reached_z)
+                if error < 0.012:
+                    return True, message
             error = math.hypot(x - reached_x, z - reached_z)
-            if error < 0.012:
-                return True, message
             now = time.monotonic()
             if math.hypot(x - last_x, z - last_z) > 0.001:
                 last_x, last_z = x, z
@@ -283,10 +315,9 @@ class ArmNode(Node):
         if self.sim:
             target = GRIPPER_OPEN if open_cmd else GRIPPER_CLOSED
             # Both fingers share the same command; URDF axes are opposite.
-            self._gripper_cmd.publish(
-                Float64MultiArray(data=[target, target])
-            )
-            deadline = time.monotonic() + 3.0
+            self._gripper_target = target
+            self._hold_gripper()
+            deadline = time.monotonic() + 2.0
             while rclpy.ok() and time.monotonic() < deadline:
                 if goal_handle.is_cancel_requested:
                     goal_handle.canceled()
@@ -296,6 +327,7 @@ class ArmNode(Node):
                     return result
                 if abs(self._gripper - target) < 0.003:
                     break
+                self._hold_gripper()
                 time.sleep(0.05)
             self._gripper_state = (
                 GripperState.OPEN if open_cmd else GripperState.CLOSED

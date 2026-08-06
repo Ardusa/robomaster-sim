@@ -130,8 +130,7 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  opacity: 0;
-  pointer-events: none;
+  background: #0a0d11;
 }
 
 .feed-layer.active {
