@@ -1,0 +1,10 @@
+# Backend SDK bridge for robotic_arm. Units are centimetres (EP text SDK).
+# command: moveto | move | stop | position
+string command
+float64 x_cm
+float64 y_cm
+---
+bool success
+string message
+float64 x_cm
+float64 y_cm

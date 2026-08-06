@@ -1,20 +1,14 @@
-"""The physical-robot half of the tether backend: controller_manager against
-the hardware interface, plus the camera. Nothing here is shared with the sim.
+"""The physical-robot half of the tether backend.
 
-Not an entry point — bringup.launch.py includes this when SIM=false and passes
-control/camera down, so a subsystem can be tested on its own.
+Who owns the control port (one client only):
 
-Who arms the video stream depends on that split. "stream on" goes over the
-control port, which takes one client at a time:
+    control=true   HardwareInterface holds it (wheels + SDK arm/gripper services).
+    control=false, arm=true
+                   sdk_bridge_node holds it (arm/gripper + optional stream on).
+    control=false, arm=false, camera=true
+                   camera_node arms the stream itself.
 
-    control=true   the hardware interface holds that port all session, so it
-                   arms the stream and the camera only reads the video port.
-    control=false  no driver, so nothing else can arm it — the camera opens the
-                   control port itself.
-
-Before running: robot powered on, in direct-connection mode, this machine on
-its Wi-Fi hotspot, ROBOMASTER_IP set in .env. Run `make test-connection` first —
-it's a much faster failure signal than the full launch stack.
+Before running: robot powered on, direct-connection mode, ROBOMASTER_IP in .env.
 """
 
 import os
@@ -36,13 +30,11 @@ def _nodes(context, *args, **kwargs):
     camera_pkg = get_package_share_directory("robomaster_camera")
     control = LaunchConfiguration("control").perform(context) == "true"
     camera = LaunchConfiguration("camera").perform(context) == "true"
+    arm = LaunchConfiguration("arm").perform(context) == "true"
 
     actions = []
 
     if control:
-        # Params passed down by bringup rather than $(find robomaster_bringup)'d
-        # here: bringup includes this file, so reaching back into it would make
-        # the two packages depend on each other.
         actions.append(
             Node(
                 package="controller_manager",
@@ -51,16 +43,36 @@ def _nodes(context, *args, **kwargs):
                 output="screen",
             )
         )
+    elif arm:
+        # No wheels — still need one TCP owner for arm/gripper (and video).
+        actions.append(
+            Node(
+                package="robomaster_driver",
+                executable="sdk_bridge_node",
+                name="robomaster_sdk_bridge",
+                output="screen",
+                parameters=[
+                    {
+                        "enable_video": camera,
+                        "robot_ip": os.environ.get("ROBOMASTER_IP", ""),
+                    }
+                ],
+            )
+        )
 
     if camera:
+        # Arm stream here only when nobody else holds the control port.
+        arm_stream = not control and not arm
         start_camera = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(camera_pkg, "launch", "camera.launch.py")),
-            launch_arguments={"arm_stream": str(not control).lower()}.items(),
+            PythonLaunchDescriptionSource(
+                os.path.join(camera_pkg, "launch", "camera.launch.py")
+            ),
+            launch_arguments={"arm_stream": str(arm_stream).lower()}.items(),
         )
-        # When the driver is arming the stream, the video port has nothing to
-        # connect to until it has activated. On its own, the camera arms the
-        # stream itself and can start immediately.
-        actions.append(TimerAction(period=5.0, actions=[start_camera]) if control else start_camera)
+        delay = 5.0 if (control or arm) else 0.0
+        actions.append(
+            TimerAction(period=delay, actions=[start_camera]) if delay else start_camera
+        )
 
     return actions
 
@@ -71,11 +83,14 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "controllers_file",
                 default_value="",
-                description="controller_manager params (bringup owns it).",
+                description=(
+                    "controller_manager params from robomaster_drivetrain; "
+                    "bringup passes the path."
+                ),
             ),
             DeclareLaunchArgument("control", default_value="true", choices=["true", "false"]),
             DeclareLaunchArgument("camera", default_value="true", choices=["true", "false"]),
-            # Accepted and ignored: bringup passes sim to every include.
+            DeclareLaunchArgument("arm", default_value="true", choices=["true", "false"]),
             DeclareLaunchArgument("sim", default_value="false", choices=["true", "false"]),
             OpaqueFunction(function=_nodes),
         ]

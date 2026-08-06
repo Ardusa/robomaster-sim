@@ -1,0 +1,20 @@
+# Cartesian goal in metres, in the arm_base_link frame.
+# x = forward, z = up (SDK uses cm with y as height; the node converts).
+float64 x
+float64 z
+# Absolute (moveto) when true; relative delta when false.
+bool absolute true
+# When use_joints is true, command arm_1/arm_2 directly (needed for tuck:
+# Cartesian IK alone leaves the elbow nearly as open as extend).
+bool use_joints false
+float64 arm_1
+float64 arm_2
+---
+bool success
+string message
+float64 x
+float64 z
+---
+float64 x
+float64 z
+bool moving

@@ -1,0 +1,10 @@
+# Backend SDK bridge for robotic_gripper.
+# command: open | close | status
+string command
+# Force level 1..4; ignored for status. 0 = omit leve (robot default).
+uint8 force_level 0
+---
+bool success
+string message
+# SDK status: 0=closed, 1=partial, 2=open. 255 if unknown / N/A.
+uint8 state 255

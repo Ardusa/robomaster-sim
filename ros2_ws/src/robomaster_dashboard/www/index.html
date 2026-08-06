@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoboMaster Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.168.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.168.0/examples/jsm/",
+      "three/examples/jsm/": "https://unpkg.com/three@0.168.0/examples/jsm/",
+      "urdf-loader": "https://cdn.jsdelivr.net/npm/urdf-loader@0.12.5/src/URDFLoader.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">RoboMaster</div>
+    <div id="status" class="status">connecting…</div>
+    <div id="mode" class="mode"></div>
+  </header>
+
+  <main class="layout" id="layout">
+    <section class="pane pane-primary" id="primary-pane">
+      <h2 id="primary-title">Camera</h2>
+      <div id="primary-feed" class="feed feed-stack" data-alt="Primary camera"></div>
+    </section>
+
+    <section class="pane pane-annotated" id="annotated-pane">
+      <h2 id="annotated-title">Annotated Detections</h2>
+      <div id="annotated-feed" class="feed feed-stack" data-alt="Annotated detections"></div>
+    </section>
+
+    <section class="pane pane-robot" id="robot-pane">
+      <div class="pane-head">
+        <h2>Robot Reconstruction</h2>
+        <div class="pane-actions">
+          <span id="fidelity-badge" class="badge" hidden></span>
+          <button type="button" id="reset-view" class="btn-ghost">Reset view</button>
+        </div>
+      </div>
+      <div id="robot3d" class="robot3d">
+        <div id="robot3d-loading" class="robot3d-loading">Loading robot model…</div>
+      </div>
+    </section>
+
+    <section class="pane pane-controls" id="controls-pane">
+      <h2>Drivetrain</h2>
+      <div class="sticks">
+        <div class="stick-block">
+          <div class="stick-label">Mecanum</div>
+          <canvas id="drive-stick" width="180" height="180"></canvas>
+        </div>
+        <div class="stick-block">
+          <div class="stick-label">Arm</div>
+          <canvas id="arm-stick" width="180" height="180"></canvas>
+          <p class="hint stick-hint">Right / left = reach · up / down = raise</p>
+        </div>
+      </div>
+      <div class="scales">
+        <label>Speed <input id="speed" type="range" min="0.05" max="1" step="0.05" /></label>
+        <label>Turn <input id="turn" type="range" min="0.05" max="2" step="0.05" /></label>
+      </div>
+      <p id="gamepad-label" class="hint">No gamepad — drag the sticks, or plug in a controller.</p>
+
+      <h2>Arm Setpoints</h2>
+      <div id="arm-readout" class="readout">
+        <span>x <strong id="arm-x">—</strong></span>
+        <span>z <strong id="arm-z">—</strong></span>
+        <span id="arm-moving" class="pill" hidden>moving</span>
+      </div>
+      <div id="preset-grid" class="btn-grid presets"></div>
+      <form id="arm-goto" class="goto">
+        <label>X <input id="goto-x" type="number" step="0.001" inputmode="decimal" /></label>
+        <label>Z <input id="goto-z" type="number" step="0.001" inputmode="decimal" /></label>
+        <button type="submit">Go</button>
+      </form>
+      <div class="btn-row">
+        <button type="button" data-arm="grip_open">Open gripper</button>
+        <button type="button" data-arm="grip_close">Close gripper</button>
+      </div>
+      <p id="gripper-label" class="hint">Gripper: —</p>
+    </section>
+  </main>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

@@ -7,7 +7,9 @@
   string (pluginlib resolves it at runtime), so this costs no dependency —
   whereas the reverse would make description depend on driver.
 
-  Joint names must match wheel.urdf.xacro's ${tf_prefix}${name}_wheel_joint.
+  Sim exposes wheels + serial arm + gripper. Tether exposes wheels only; the
+  physical arm is driven through the SDK on the same TCP session the hardware
+  interface owns (see robomaster_driver / robomaster_arm).
 -->
 <robot xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro">
 
@@ -34,8 +36,29 @@
     </joint>
   </xacro:macro>
 
-  <!-- sim_controllers_file is passed in, not $(find robomaster_gazebo)'d:
-       description must not reference a package that depends on it. -->
+  <xacro:macro name="arm_ros2_control_joints" params="tf_prefix=''">
+    <joint name="${tf_prefix}arm_1_joint">
+      <command_interface name="position" />
+      <state_interface name="position" />
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="${tf_prefix}arm_2_joint">
+      <command_interface name="position" />
+      <state_interface name="position" />
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="${tf_prefix}gripper_m_joint">
+      <command_interface name="position" />
+      <state_interface name="position" />
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="${tf_prefix}gripper_r_joint">
+      <command_interface name="position" />
+      <state_interface name="position" />
+      <state_interface name="velocity" />
+    </joint>
+  </xacro:macro>
+
   <xacro:macro name="ros2_control"
     params="sim:=false tf_prefix='' robot_ip:=''
             control_port:=40923 wheel_radius_m:=0.05
@@ -59,10 +82,9 @@
           <plugin>gz_ros2_control/GazeboSimSystem</plugin>
         </hardware>
         <xacro:wheel_ros2_control_joints tf_prefix="${tf_prefix}" />
+        <xacro:arm_ros2_control_joints tf_prefix="${tf_prefix}" />
       </ros2_control>
 
-      <!-- Loads controller_manager inside the Gazebo process, so sim needs no
-           standalone ros2_control_node. -->
       <gazebo>
         <plugin filename="gz_ros2_control-system"
           name="gz_ros2_control::GazeboSimROS2ControlPlugin">

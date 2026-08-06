@@ -1,4 +1,4 @@
-<library path="robomaster_driver">
+<library path="robomaster_driver_hw">
     <class name="robomaster_driver/HardwareInterface"
         type="robomaster_driver::HardwareInterface"
         base_class_type="hardware_interface::SystemInterface">

@@ -4,36 +4,15 @@
 #   python3 scripts/mesh_inertia.py --batch scripts/inertia_manifest.txt
 #
 # Columns: link  mass_kg  mesh  [mesh_origin_x y z]
-# The mesh is the link's collision geometry where it has one, otherwise its
-# visual; the origin is that element's <origin> xyz, so the reported centre of
-# mass comes out in link coordinates.
 #
-# Links with no geometry at all (end_point_link, gripper_m_link, gripper_t_link)
-# are not listed: they are pure coordinate frames and carry a nominal
-# point-mass inertia written directly in the xacro.
+# Parallel-jaw model: gripper_m_link / gripper_r_link carry the finger meshes
+# with nominal inertias in the xacro (tips only collide).
 
 # --- arm ---
 arm_base_link          0.3    meshes/arm_base_collision.dae          -0.002098   -0.0004909   0.0073523
 arm_1_link             0.056  meshes/arm_1_collision.dae              0.0065116   0.0213649   0.0639448
 arm_2_link             0.08   meshes/arm_2_collision.dae              0.0222614  -0.0202749  -0.008504
 endpoint_bracket_link  0.028  meshes/endpoint_bracket_collision.dae   0.0116468  -0.0288044   0.0041342
-rod_link               0.011  meshes/rod_collision.dae               -0.02432     0.0022871   0.0136485
-rod_1_link             0.012  meshes/rod_1_collision.dae             -0.0477809   0           0.0272644
-rod_2_link             0.012  meshes/rod_2_collision.dae              0.0011528   0           0.0549123
-rod_3_link             0.012  meshes/rod_3_collision.dae              0.0004696   0.0000095   0.0561803
-triangle_link          0.009  meshes/triangle_collision.dae          -0.0091994   0           0.012377
 
 # --- gripper ---
 gripper_link           0.15   meshes/gripper_base_collision.dae       0.0003688  -0.0000978  -0.0112797
-left_gripper_link_1    0.001  meshes/gripper_left_1.dae              -0.0000152   0.0000812  -0.0000225
-left_gripper_link_2    0.001  meshes/gripper_left_2_collision.dae     0.0136108  -0.003318   -0.0296613
-left_gripper_link_4    0.001  meshes/gripper_left_4_collision.dae    -0.0000756  -0.0000297  -0.0296554
-left_gripper_link_5    0.001  meshes/gripper_left_5_collision.dae    -0.0000726  -0.0000018  -0.0000183
-left_gripper_link_6    0.001  meshes/gripper_left_6_collision.dae    -0.0149892  -0.0167532  -0.0001821
-left_gripper_link_7    0.001  meshes/gripper_left_collision.dae      -0.0149126  -0.0167727  -0.0296388
-right_gripper_link_1   0.001  meshes/right_gripper_1.dae             -0.0000152  -0.0000812  -0.0000225
-right_gripper_link_2   0.001  meshes/right_gripper_2_collision.dae    0.0134077   0.0024401  -0.0296613
-right_gripper_link_4   0.001  meshes/right_gripper_4_collision.dae   -0.0000657   0.0000116  -0.0296554
-right_gripper_link_5   0.001  meshes/right_gripper_5_collision.dae   -0.0001606   0.0000235   0.0000810
-right_gripper_link_6   0.001  meshes/right_gripper_6_collision.dae   -0.0156676   0.0173828   0.0000682
-right_gripper_link_7   0.001  meshes/right_gripper_7_collision.dae   -0.0150056   0.0168496  -0.0296388

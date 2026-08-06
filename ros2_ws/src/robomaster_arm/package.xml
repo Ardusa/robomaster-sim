@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>robomaster_arm</name>
+  <version>0.0.1</version>
+  <description>Cartesian arm and gripper control for the RoboMaster EP.
+
+    Public API matches the EP text SDK (moveto x/y, gripper open/close). Sim
+    runs a serial-equivalent 2R + prismatic model under Fortress; tether talks
+    to the robot through robomaster_driver SDK services on the shared control
+    port.
+  </description>
+  <maintainer email="ardusa05@gmail.com">Ankur</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+  <!-- Python helpers live in scripts/; rosidl owns the robomaster_arm Python pkg. -->
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>action_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>controller_manager</depend>
+  <depend>position_controllers</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+  <depend>robomaster_driver</depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

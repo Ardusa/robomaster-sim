@@ -6,7 +6,7 @@ from bringup.launch.py, which is the one place SIM is read.
 
 No controller_manager here: the backends load it differently (sim in-process
 via the Gazebo plugin, tether via ros2_control_node), and the spawners would
-hang this if it were run on its own. See control.launch.py.
+hang this if it were run on its own. See robomaster_drivetrain/control.launch.py.
 """
 
 import os
@@ -20,7 +20,7 @@ import xacro
 
 def _nodes(context, *args, **kwargs):
     desc_pkg = get_package_share_directory("robomaster_description")
-    bringup_pkg = get_package_share_directory("robomaster_bringup")
+    drivetrain_pkg = get_package_share_directory("robomaster_drivetrain")
     xacro_file = os.path.join(desc_pkg, "urdf", "robomaster_ep.urdf.xacro")
 
     sim = LaunchConfiguration("sim").perform(context)
@@ -42,7 +42,10 @@ def _nodes(context, *args, **kwargs):
             "sim": sim,
             "robot_ip": robot_ip,
             # Passed in so description doesn't have to $(find ...) it itself.
-            "sim_controllers_file": os.path.join(bringup_pkg, "config", "sim_controllers.yaml"),
+            # Controllers YAML lives in drivetrain, not here.
+            "sim_controllers_file": os.path.join(
+                drivetrain_pkg, "config", "sim_controllers.yaml"
+            ),
         },
     ).toxml()
 
@@ -53,17 +56,20 @@ def _nodes(context, *args, **kwargs):
         parameters=[{"robot_description": robot_description, "use_sim_time": use_sim_time}],
     )
 
-    # Also publishes the wheel joints, which joint_state_broadcaster owns once
-    # controllers are up; the resulting duplicate makes wheel TF flicker.
-    # Harmless for driving — revisit if you render wheels in RViz.
-    jsp = Node(
-        package="joint_state_publisher",
-        executable="joint_state_publisher",
-        output="screen",
-        parameters=[{"use_sim_time": use_sim_time}],
-    )
-
-    return [rsp, jsp]
+    actions = [rsp]
+    if not use_sim_time:
+        # Tether has no joint_state_broadcaster for the full chain; JSP fills in.
+        # In sim, JSB already owns /joint_states — a second JSP publisher zeros
+        # the arm/gripper and fights the controllers (and flickers wheel TF).
+        actions.append(
+            Node(
+                package="joint_state_publisher",
+                executable="joint_state_publisher",
+                output="screen",
+                parameters=[{"use_sim_time": use_sim_time}],
+            )
+        )
+    return actions
 
 
 def generate_launch_description():

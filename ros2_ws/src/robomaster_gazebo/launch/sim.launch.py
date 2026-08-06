@@ -13,6 +13,7 @@ is spawned. bringup's spawners wait for it.
 import glob
 import math
 import os
+import subprocess
 import tempfile
 from xml.etree import ElementTree
 
@@ -28,6 +29,10 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+import xacro
+
+
+IGNITION_XMLNS = "http://gazebosim.org/schema"
 
 
 def _default_world() -> str:
@@ -150,6 +155,86 @@ def _gui_config(world: str) -> str:
     return path
 
 
+def _sim_model_file() -> str:
+    """Convert the shared URDF to SDF and add mecanum contact physics.
+
+    Fortress' URDF converter drops directional-friction extensions from this
+    model after fixed-joint reduction. Patching the generated SDF is explicit,
+    testable, and sim-only; robot_state_publisher and the tether backend keep
+    consuming the ordinary shared URDF.
+    """
+    description_share = get_package_share_directory("robomaster_description")
+    drivetrain_share = get_package_share_directory("robomaster_drivetrain")
+    urdf = xacro.process_file(
+        os.path.join(description_share, "urdf", "robomaster_ep.urdf.xacro"),
+        mappings={
+            "sim": "true",
+            "robot_ip": "",
+            "sim_controllers_file": os.path.join(
+                drivetrain_share, "config", "sim_controllers.yaml"
+            ),
+        },
+    ).toxml()
+
+    urdf_handle, urdf_path = tempfile.mkstemp(
+        prefix="robomaster_sim_", suffix=".urdf"
+    )
+    with os.fdopen(urdf_handle, "w", encoding="utf-8") as out:
+        out.write(urdf)
+
+    try:
+        converted = subprocess.run(
+            ["ign", "sdf", "-p", urdf_path],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError(f"could not convert robot URDF to sim SDF: {exc}") from exc
+    finally:
+        os.unlink(urdf_path)
+
+    root = ElementTree.fromstring(converted)
+    # Same X roller pattern as Gazebo's mecanum_drive example. mu is friction
+    # along the roller axis; mu2=0 allows free motion perpendicular to it.
+    roller_directions = {
+        "front_left_wheel_link": "1 -1 0",
+        "front_right_wheel_link": "1 1 0",
+        "rear_left_wheel_link": "1 1 0",
+        "rear_right_wheel_link": "1 -1 0",
+    }
+    ElementTree.register_namespace("ignition", IGNITION_XMLNS)
+    for link_name, direction in roller_directions.items():
+        collision = root.find(f".//link[@name='{link_name}']/collision")
+        if collision is None:
+            raise RuntimeError(
+                f"generated sim SDF has no collision for '{link_name}'"
+            )
+        surface = collision.find("surface")
+        if surface is None:
+            surface = ElementTree.SubElement(collision, "surface")
+        friction = surface.find("friction")
+        if friction is None:
+            friction = ElementTree.SubElement(surface, "friction")
+        ode = friction.find("ode")
+        if ode is None:
+            ode = ElementTree.SubElement(friction, "ode")
+        ElementTree.SubElement(ode, "mu").text = "1.0"
+        ElementTree.SubElement(ode, "mu2").text = "0.0"
+        fdir1 = ElementTree.SubElement(ode, "fdir1")
+        fdir1.set(f"{{{IGNITION_XMLNS}}}expressed_in", "base_link")
+        fdir1.text = direction
+
+    sdf_handle, sdf_path = tempfile.mkstemp(
+        prefix="robomaster_sim_", suffix=".sdf"
+    )
+    with os.fdopen(sdf_handle, "wb") as out:
+        ElementTree.ElementTree(root).write(
+            out, encoding="utf-8", xml_declaration=True
+        )
+    return sdf_path
+
+
 def _spawn(context, *args, **kwargs):
     x, y, z, yaw = _spawn_pose(_resolve_world(context))
     return [
@@ -157,7 +242,7 @@ def _spawn(context, *args, **kwargs):
             package="ros_gz_sim",
             executable="create",
             arguments=[
-                "-topic", "robot_description",
+                "-file", _sim_model_file(),
                 "-name", "robomaster_ep",
                 "-x", x, "-y", y, "-z", z, "-Y", yaw,
             ],
@@ -201,13 +286,13 @@ def generate_launch_description():
     gazebo_share = get_package_share_directory("robomaster_gazebo")
     description_share = get_package_share_directory("robomaster_description")
 
-    # Gazebo publishes the camera on its own transport; these bridge it onto
-    # the ROS topics apriltag_node reads. Names match camera_node.py's, so
-    # detection doesn't care which backend is running.
+    # Gazebo publishes cameras on its own transport; these bridge them onto
+    # ROS topics. Robot cam names match camera_node.py so detection can't tell
+    # backends apart. /camera/overview is the dashboard top-down feed.
     camera_bridge = Node(
         package="ros_gz_image",
         executable="image_bridge",
-        arguments=["/camera/image_raw"],
+        arguments=["/camera/image_raw", "/camera/overview"],
         output="screen",
         parameters=[{"use_sim_time": True}],
     )
@@ -215,7 +300,9 @@ def generate_launch_description():
     camera_info_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        arguments=["/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo"],
+        arguments=[
+            "/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
+        ],
         output="screen",
         parameters=[{"use_sim_time": True}],
     )

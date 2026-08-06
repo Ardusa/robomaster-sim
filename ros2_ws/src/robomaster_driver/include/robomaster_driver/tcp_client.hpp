@@ -60,6 +60,10 @@ public:
   void drain_responses();
 
 private:
+  // Caller must hold send_mutex_. Discards stale fire-and-forget acks so the
+  // next blocking send_command() reads its own reply, not a chassis leftover.
+  void drain_responses_unlocked();
+
   int socket_fd_ = -1;
   std::mutex
       send_mutex_; // serializes writers; recv is single-threaded by design

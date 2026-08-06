@@ -1,11 +1,11 @@
-"""Shared control layer — controller spawners + twist arbitration.
+"""Shared drivetrain — controller spawners + twist arbitration.
 
 Included by both backends unchanged: each stands up a controller_manager under
 the same name, so the spawners don't care which one is there.
 
     teleop   -> /cmd_vel_teleop   --\\
                                      cmd_vel_mux -> mecanum_drive_controller
-    apriltag -> /cmd_vel_autonomy --/
+    autonomy -> /cmd_vel_autonomy --/
 
 To add a new way to drive the robot, add a topic to config/twist_mux.yaml —
 the controller and driver stay untouched.
@@ -20,8 +20,8 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    bringup_pkg = get_package_share_directory("robomaster_bringup")
-    twist_mux_config = os.path.join(bringup_pkg, "config", "twist_mux.yaml")
+    drivetrain_pkg = get_package_share_directory("robomaster_drivetrain")
+    twist_mux_config = os.path.join(drivetrain_pkg, "config", "twist_mux.yaml")
 
     sim = LaunchConfiguration("sim")
     use_sim_time = PythonExpression(["'", sim, "' == 'true'"])
@@ -48,7 +48,7 @@ def generate_launch_description():
     # libdiagnostic_updater.so, which no ros-humble-diagnostic-updater in the
     # repos ships. Same config schema, so it can be swapped back if fixed.
     cmd_vel_mux = Node(
-        package="robomaster_bringup",
+        package="robomaster_drivetrain",
         executable="cmd_vel_mux.py",
         name="cmd_vel_mux",
         output="screen",

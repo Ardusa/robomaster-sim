@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>robomaster_teleop</name>
+    <version>0.0.1</version>
+    <description>Human input for the RoboMaster EP.
+
+        Publishes Twist on /cmd_vel_teleop and sends Cartesian arm / gripper
+        goals to robomaster_arm. Does not spawn controllers.
+    </description>
+    <maintainer email="ardusa05@gmail.com">Ankur</maintainer>
+    <license>MIT</license>
+
+    <buildtool_depend>ament_cmake</buildtool_depend>
+
+    <exec_depend>launch</exec_depend>
+    <exec_depend>launch_ros</exec_depend>
+    <exec_depend>rclpy</exec_depend>
+    <exec_depend>geometry_msgs</exec_depend>
+    <exec_depend>robomaster_arm</exec_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>

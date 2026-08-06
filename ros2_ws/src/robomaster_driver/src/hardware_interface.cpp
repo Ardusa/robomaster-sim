@@ -140,16 +140,46 @@ hardware_interface::CallbackReturn HardwareInterface::on_activate(
   wheel_velocity_command_.fill(0.0);
   wheel_velocity_state_.fill(0.0);
 
+  start_sdk_bridge();
+
   RCLCPP_INFO(get_logger(), "activated.");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
+void HardwareInterface::start_sdk_bridge() {
+  stop_sdk_bridge();
+  sdk_node_ = rclcpp::Node::make_shared("robomaster_sdk_bridge");
+  sdk_bridge_ = std::make_unique<SdkBridge>(sdk_node_, tcp_client_.get());
+  sdk_executor_ =
+      std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+  sdk_executor_->add_node(sdk_node_);
+  sdk_spin_thread_ = std::thread([this]() {
+    if (sdk_executor_) {
+      sdk_executor_->spin();
+    }
+  });
+}
+
+void HardwareInterface::stop_sdk_bridge() {
+  if (sdk_executor_) {
+    sdk_executor_->cancel();
+  }
+  if (sdk_spin_thread_.joinable()) {
+    sdk_spin_thread_.join();
+  }
+  sdk_bridge_.reset();
+  sdk_executor_.reset();
+  sdk_node_.reset();
+}
+
 hardware_interface::CallbackReturn HardwareInterface::on_deactivate(
     const rclcpp_lifecycle::State & /*previous_state*/) {
+  stop_sdk_bridge();
   if (tcp_client_) {
     // Stop the chassis before dropping the connection - don't leave
     // it coasting on whatever the last command was.
     tcp_client_->send_fire_and_forget("chassis wheel w1 0 w2 0 w3 0 w4 0");
+    tcp_client_->send_fire_and_forget("robotic_arm stop");
     if (enable_video_) {
       tcp_client_->send_fire_and_forget("stream off");
     }

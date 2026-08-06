@@ -42,7 +42,7 @@ int main(int  /*argc*/, char ** /*argv*/) {
 
   robomaster_driver::TcpClient client;
 
-  std::cout << "[1/4] connecting + entering SDK mode... ";
+  std::cout << "[1/6] connecting + entering SDK mode... ";
   if (!client.connect(robot_ip)) {
     std::cout << "FAILED\n";
     std::cout << "\nCouldn't connect. Check: robot powered on, "
@@ -58,7 +58,7 @@ int main(int  /*argc*/, char ** /*argv*/) {
   // robot is still tearing down a previous session (it allows one client, so a
   // container restart can leave it briefly busy). A false FAILED here sends you
   // hunting a network problem that isn't there.
-  std::cout << "[2/4] querying battery level... ";
+  std::cout << "[2/6] querying battery level... ";
   std::string response;
   bool battery_ok = client.send_command("robot battery ?", response, 3000);
   if (!battery_ok) {
@@ -74,14 +74,14 @@ int main(int  /*argc*/, char ** /*argv*/) {
   }
   std::cout << response << "%\n";
 
-  std::cout << "[3/4] setting movement mode to free... ";
+  std::cout << "[3/6] setting movement mode to free... ";
   if (!client.send_command("robot mode free", response) || response != "ok") {
     std::cout << "FAILED (got '" << response << "')\n";
     return 1;
   }
   std::cout << "ok\n";
 
-  std::cout << "[4/4] sending zero-velocity chassis command (write-path check, "
+  std::cout << "[4/6] sending zero-velocity chassis command (write-path check, "
                "robot should NOT move)... ";
   if (!client.send_command("chassis wheel w1 0 w2 0 w3 0 w4 0", response) ||
       response != "ok") {
@@ -89,6 +89,21 @@ int main(int  /*argc*/, char ** /*argv*/) {
     return 1;
   }
   std::cout << "ok\n";
+
+  // Optional: arm/gripper may be absent on some kits — warn, don't fail.
+  std::cout << "[5/6] querying robotic_arm position (optional)... ";
+  if (!client.send_command("robotic_arm position ?", response, 3000)) {
+    std::cout << "skipped (no response)\n";
+  } else {
+    std::cout << response << "\n";
+  }
+
+  std::cout << "[6/6] querying robotic_gripper status (optional)... ";
+  if (!client.send_command("robotic_gripper status ?", response, 3000)) {
+    std::cout << "skipped (no response)\n";
+  } else {
+    std::cout << response << "\n";
+  }
 
   client.disconnect();
   std::cout << "\nAll checks passed. Robot is reachable and accepting SDK "

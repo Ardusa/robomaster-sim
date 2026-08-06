@@ -5,7 +5,7 @@ control port and arms the stream itself). Run standalone with the default
 arm_stream:=true to get video with no driver — useful for checking the camera
 or calibrating without driving.
 
-Pair with robomaster_detection's detection.launch.py for tag detection.
+Pair with robomaster_detection's detection.launch.py for object detection.
 """
 
 from launch import LaunchDescription

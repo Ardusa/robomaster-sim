@@ -19,12 +19,13 @@ setup(
     zip_safe=True,
     maintainer="Ardusa",
     maintainer_email="ardusa05@gmail.com",
-    description="AprilTag detection and debug overlay for the RoboMaster EP.",
+    description="COCO object detection and debug overlay for the RoboMaster EP.",
     license="MIT",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "tag_overlay_node = robomaster_detection.tag_overlay_node:main",
+            "object_detector_node = robomaster_detection.object_detector_node:main",
+            "detection_overlay_node = robomaster_detection.detection_overlay_node:main",
         ],
     },
 )

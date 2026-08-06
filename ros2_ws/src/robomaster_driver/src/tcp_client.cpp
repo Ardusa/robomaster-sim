@@ -103,6 +103,10 @@ bool TcpClient::send_command(const std::string &cmd,
   }
   std::lock_guard<std::mutex> lock(send_mutex_);
 
+  // Chassis write() uses fire-and-forget; clear those acks before we wait on
+  // our own reply (arm/gripper services share this socket).
+  drain_responses_unlocked();
+
   set_socket_timeout(socket_fd_, timeout_ms);
 
   const std::string wire_cmd = cmd + ";";
@@ -146,7 +150,7 @@ bool TcpClient::send_fire_and_forget(const std::string &cmd) {
   return true;
 }
 
-void TcpClient::drain_responses() {
+void TcpClient::drain_responses_unlocked() {
   if (socket_fd_ < 0) {
     return;
   }
@@ -159,6 +163,14 @@ void TcpClient::drain_responses() {
       break;
     }
   }
+}
+
+void TcpClient::drain_responses() {
+  if (socket_fd_ < 0) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(send_mutex_);
+  drain_responses_unlocked();
 }
 
 } // namespace robomaster_driver
