@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libgl1-mesa-dri \
     libgl1-mesa-glx \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Keep numpy 1.x: system python3-opencv was built against it; pip's default
@@ -47,6 +48,13 @@ RUN pip3 install --no-cache-dir "numpy<2" onnxruntime
 
 COPY --from=yolo-model /opt/robomaster/models/yolov8n.onnx /opt/robomaster/models/yolov8n.onnx
 
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
+# Mac/Windows: Gazebo's Ogre still needs a display for GLX even with
+# --headless-rendering. Xvfb provides one inside the container (see
+# docker-compose.mac.yml XVFB=1). WSL2/Linux with a real DISPLAY skip it.
+COPY scripts/docker-entrypoint.sh /usr/local/bin/robomaster-entrypoint.sh
+RUN chmod +x /usr/local/bin/robomaster-entrypoint.sh \
+    && echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 
 WORKDIR /root/ros2_ws
+ENTRYPOINT ["/usr/local/bin/robomaster-entrypoint.sh"]
+CMD ["bash"]

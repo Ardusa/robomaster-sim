@@ -30,8 +30,9 @@ export function createStreamFeed(container) {
       img.removeAttribute("src");
       return;
     }
-    // type=mjpeg is the default; quality keeps bandwidth reasonable next to WebGL.
-    img.src = `${base}/stream?topic=${encodeURIComponent(topic)}&type=mjpeg&quality=60`;
+    // web_video_server wants a literal ROS topic (/camera/...), not %2F-encoded.
+    // Topics come from our config, not free-form user input.
+    img.src = `${base}/stream?topic=${topic}&type=mjpeg&quality=60`;
   }
 
   function dispose() {

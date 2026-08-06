@@ -16,6 +16,7 @@ import onnxruntime as ort
 import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from vision_msgs.msg import (
@@ -78,7 +79,12 @@ class ObjectDetectorNode(Node):
         self.declare_parameter("iou", 0.45)
         self.declare_parameter("imgsz", 320)
         self.declare_parameter("rate_hz", 5.0)
-        self.declare_parameter("class_allowlist", [])
+        # Empty [] is typed as BYTE_ARRAY by rclpy; declare the type explicitly
+        # so the YAML string list (or an empty allowlist = all COCO) loads.
+        self.declare_parameter(
+            "class_allowlist",
+            Parameter.Type.STRING_ARRAY,
+        )
 
         model_path = self.get_parameter("model_path").value
         self._confidence = float(self.get_parameter("confidence").value)
@@ -87,7 +93,11 @@ class ObjectDetectorNode(Node):
         self._min_period = 1.0 / max(
             float(self.get_parameter("rate_hz").value), 0.1
         )
-        allowlist = list(self.get_parameter("class_allowlist").value)
+        allowlist = [
+            name
+            for name in self.get_parameter("class_allowlist").value
+            if name
+        ]
         self._allowlist: Optional[Set[str]] = (
             set(allowlist) if allowlist else None
         )
