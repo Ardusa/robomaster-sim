@@ -33,6 +33,8 @@ from std_msgs.msg import Float64MultiArray, String
 
 from robomaster_arm.action import MoveArm, SetGripper
 from robomaster_arm.msg import ArmState, GripperState
+from robomaster_command.msg import ActionPrimitive
+from robomaster_command.srv import ExecuteActionSequence, GenerateActionSequence
 
 # Keep in sync with robomaster_arm/scripts/arm_kinematics.py PRESETS.
 # Tuck is joint-space (elbow must fold); xyz is fk(joints) for UI labels.
@@ -48,6 +50,8 @@ DEFAULT_SPEED = 0.3
 DEFAULT_TURN = 0.8
 DEADMAN_SEC = 0.4
 STATE_HZ = 20.0
+COMMAND_SERVICE_WAIT_SEC = 3.0
+COMMAND_CALL_TIMEOUT_SEC = 120.0
 
 # Workspace envelope for the arm setpoint UI (metres in arm_base_link).
 ARM_LIMITS = {
@@ -67,6 +71,14 @@ class DashboardNode(Node):
         self._pub = self.create_publisher(Twist, "/cmd_vel_teleop", 1)
         self._move_arm = ActionClient(self, MoveArm, "/robomaster_arm/move_arm")
         self._set_gripper = ActionClient(self, SetGripper, "/robomaster_arm/set_gripper")
+        self._generate_seq = self.create_client(
+            GenerateActionSequence,
+            "/robomaster_command_grounding/generate_action_sequence",
+        )
+        self._execute_seq = self.create_client(
+            ExecuteActionSequence,
+            "/robomaster_command_translator/execute_action_sequence",
+        )
         # Sim fallback: action client discovery from a worker thread is flaky
         # next to the asyncio spin_once loop, so command the controller directly.
         self._gripper_cmd = self.create_publisher(
@@ -74,6 +86,7 @@ class DashboardNode(Node):
         )
 
         self._lock = threading.Lock()
+        self._command_lock = threading.Lock()
         self._arm_deadline = 0.0
         self._last_cmd = 0.0
         # Not named _clients: rclpy.Node.clients is a generator of service clients.
@@ -344,6 +357,124 @@ class DashboardNode(Node):
     def handle_arm_goto(self, x: float, z: float) -> None:
         self._arm_goal(x, z, True)
 
+    @staticmethod
+    def _action_to_dict(action: ActionPrimitive) -> Dict[str, Any]:
+        return {
+            "type": action.type,
+            "target_zone": action.target_zone,
+            "x": float(action.x),
+            "y": float(action.y),
+            "theta": float(action.theta),
+            "use_explicit_pose": bool(action.use_explicit_pose),
+            "arm_x": float(action.arm_x),
+            "arm_z": float(action.arm_z),
+            "gripper_open": bool(action.gripper_open),
+        }
+
+    def broadcast_json(self, payload: Dict[str, Any]) -> None:
+        data = json.dumps(payload)
+        loop = self._loop
+        if loop is None or not loop.is_running():
+            return
+
+        async def _send_all() -> None:
+            for ws in self.ws_snapshot():
+                if ws.closed:
+                    continue
+                try:
+                    await ws.send_str(data)
+                except ConnectionResetError:
+                    pass
+                except Exception:  # noqa: BLE001
+                    pass
+
+        asyncio.run_coroutine_threadsafe(_send_all(), loop)
+
+    def _call_service(self, client, request, label: str):
+        if not client.wait_for_service(timeout_sec=COMMAND_SERVICE_WAIT_SEC):
+            raise RuntimeError(
+                f"{label} not available — is robomaster_command launched?"
+            )
+        future = client.call_async(request)
+        return future.result(timeout=COMMAND_CALL_TIMEOUT_SEC)
+
+    def handle_command(self, text: str) -> None:
+        prompt = (text or "").strip()
+        if not prompt:
+            self.broadcast_json(
+                {
+                    "type": "command_result",
+                    "success": False,
+                    "message": "empty command",
+                }
+            )
+            return
+
+        with self._command_lock:
+            self.get_logger().info(f"command: {prompt!r}")
+            try:
+                gen_req = GenerateActionSequence.Request()
+                gen_req.prompt = prompt
+                gen_res = self._call_service(
+                    self._generate_seq, gen_req, "generate_action_sequence"
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warning(f"generate failed: {exc}")
+                self.broadcast_json(
+                    {
+                        "type": "command_result",
+                        "success": False,
+                        "message": str(exc),
+                    }
+                )
+                return
+
+            if not gen_res.success:
+                self.broadcast_json(
+                    {
+                        "type": "command_result",
+                        "success": False,
+                        "message": gen_res.message or "generate_action_sequence failed",
+                    }
+                )
+                return
+
+            actions = list(gen_res.actions)
+            self.broadcast_json(
+                {
+                    "type": "action_sequence",
+                    "prompt": prompt,
+                    "actions": [self._action_to_dict(a) for a in actions],
+                }
+            )
+
+            try:
+                exec_req = ExecuteActionSequence.Request()
+                exec_req.actions = actions
+                exec_res = self._call_service(
+                    self._execute_seq, exec_req, "execute_action_sequence"
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warning(f"execute failed: {exc}")
+                self.broadcast_json(
+                    {
+                        "type": "command_result",
+                        "success": False,
+                        "message": str(exc),
+                    }
+                )
+                return
+
+            self.broadcast_json(
+                {
+                    "type": "command_result",
+                    "success": bool(exec_res.success),
+                    "message": exec_res.message or (
+                        "ok" if exec_res.success else "execute_action_sequence failed"
+                    ),
+                }
+            )
+
     def config_dict(self) -> dict:
         if self._sim:
             primary = {
@@ -462,6 +593,12 @@ def _build_app(node: DashboardNode) -> web.Application:
                     await asyncio.get_event_loop().run_in_executor(
                         None, node.handle_arm_goto, x, z
                     )
+                elif kind == "command":
+                    text = data.get("text", "")
+                    if isinstance(text, str) and text.strip():
+                        await asyncio.get_event_loop().run_in_executor(
+                            None, node.handle_command, text
+                        )
         finally:
             remaining = node.unregister_ws(ws)
             node.stop()

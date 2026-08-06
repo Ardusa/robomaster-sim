@@ -19,6 +19,7 @@ from robomaster_command.srv import GenerateActionSequence
 class GroundingNode(Node):
     def __init__(self) -> None:
         super().__init__("robomaster_command_grounding")
+        self.declare_parameter("use_sim_time", False)
         self.create_service(
             GenerateActionSequence,
             "~/generate_action_sequence",

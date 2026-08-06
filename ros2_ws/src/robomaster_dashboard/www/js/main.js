@@ -1,5 +1,6 @@
 import { createJoystick, applyDeadzone } from "./joystick.js";
 import { createArmPanel } from "./arm.js";
+import { createCommandPanel } from "./command.js";
 import { createTelemetry } from "./telemetry.js";
 import { createRobot3d } from "./robot3d.js";
 import { createStreamFeed } from "./feeds.js";
@@ -84,6 +85,14 @@ import { createStreamFeed } from "./feeds.js";
     gotoForm: document.getElementById("arm-goto"),
     gotoX: document.getElementById("goto-x"),
     gotoZ: document.getElementById("goto-z"),
+    send,
+  });
+
+  const commandPanel = createCommandPanel({
+    form: document.getElementById("command-form"),
+    input: document.getElementById("command-input"),
+    sequenceEl: document.getElementById("command-sequence"),
+    resultEl: document.getElementById("command-result"),
     send,
   });
 
@@ -209,6 +218,10 @@ import { createStreamFeed } from "./feeds.js";
       }
       if (data?.type === "state") {
         for (const fn of stateListeners) fn(data);
+      } else if (data?.type === "action_sequence") {
+        commandPanel.onActionSequence(data);
+      } else if (data?.type === "command_result") {
+        commandPanel.onCommandResult(data);
       }
     };
   }

@@ -378,6 +378,53 @@ button:active { background: #2d3848; }
   color: var(--muted);
 }
 
+.command-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: end;
+}
+
+.command-label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.command-form input {
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #10151c;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.5rem 0.55rem;
+  font: inherit;
+}
+
+.command-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.command-sequence {
+  margin: 0.65rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.command-sequence:empty {
+  display: none;
+}
+
+.command-result.ok { color: var(--good); }
+.command-result.bad { color: var(--bad); }
+
 @media (max-width: 1200px) {
   .layout {
     grid-template-columns: 1fr 1fr;

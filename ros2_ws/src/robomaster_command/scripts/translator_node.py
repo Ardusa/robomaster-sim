@@ -14,6 +14,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
@@ -34,6 +35,7 @@ NAV_RATE_HZ = 20.0
 
 ACTION_SERVER_WAIT_SEC = 5.0
 ACTION_RESULT_TIMEOUT_SEC = 30.0
+ODOM_WAIT_SEC = 5.0
 
 
 def _clamp(value: float, limit: float) -> float:
@@ -41,6 +43,7 @@ def _clamp(value: float, limit: float) -> float:
 
 
 def _wrap_angle(angle: float) -> float:
+    """Wrap to [-pi, pi] so the rotate phase always takes the short way."""
     return math.atan2(math.sin(angle), math.cos(angle))
 
 
@@ -53,11 +56,13 @@ def _yaw_from_quat(q) -> float:
 class TranslatorNode(Node):
     def __init__(self) -> None:
         super().__init__("robomaster_command_translator")
+        self.declare_parameter("use_sim_time", False)
         self.declare_parameter("semantic_map_path", "")
 
         self._cb = ReentrantCallbackGroup()
         self._odom_lock = threading.Lock()
         self._odom: dict[str, float] | None = None
+        self._odom_received = False
 
         map_path = self.get_parameter("semantic_map_path").get_parameter_value().string_value
         self._zones = self._load_semantic_map(map_path)
@@ -92,7 +97,7 @@ class TranslatorNode(Node):
         if not map_path:
             self.get_logger().error(
                 "semantic_map_path is unset. Pass it via command.launch.py "
-                "(config/semantic_maps/<semantic_map>)."
+                "(config/semantic_maps/<world_stem>.yaml)."
             )
             return None
         if not os.path.isfile(map_path):
@@ -134,19 +139,50 @@ class TranslatorNode(Node):
         yaw = _yaw_from_quat(msg.pose.pose.orientation)
         with self._odom_lock:
             self._odom = {"x": float(p.x), "y": float(p.y), "yaw": float(yaw)}
+            self._odom_received = True
 
     def _pose(self) -> dict[str, float] | None:
         with self._odom_lock:
             return None if self._odom is None else dict(self._odom)
 
+    def _has_odom(self) -> bool:
+        with self._odom_lock:
+            return self._odom_received
+
     def _stop(self) -> None:
         self._cmd_pub.publish(Twist())
+
+    def _sleep_until(self, deadline) -> None:
+        """Wait until the node clock reaches deadline, yielding on wall time."""
+        while self.get_clock().now() < deadline:
+            time.sleep(0.005)
+
+    def _wait_for_odom(self, timeout_sec: float) -> bool:
+        if self._has_odom():
+            return True
+        deadline = self.get_clock().now() + Duration(seconds=timeout_sec)
+        while self.get_clock().now() < deadline:
+            if self._has_odom():
+                return True
+            time.sleep(0.05)
+        return self._has_odom()
 
     def _on_execute(
         self,
         request: ExecuteActionSequence.Request,
         response: ExecuteActionSequence.Response,
     ) -> ExecuteActionSequence.Response:
+        needs_odom = any(
+            a.type.strip().lower() == "navigate" for a in request.actions
+        )
+        if needs_odom and not self._wait_for_odom(ODOM_WAIT_SEC):
+            response.success = False
+            response.message = (
+                "no odometry on /mecanum_drive_controller/odometry "
+                f"after {ODOM_WAIT_SEC:.0f}s — is the drivetrain up?"
+            )
+            return response
+
         for i, action in enumerate(request.actions):
             ok, message = self._run_action(i, action)
             if not ok:
@@ -170,51 +206,52 @@ class TranslatorNode(Node):
             return self._arm_goto(index, action)
         if kind == "gripper":
             return self._gripper(index, action)
-        return False, f"step {index}: unknown type {action.type!r}"
+        return (
+            False,
+            f"step {index}: unrecognized type {action.type!r} "
+            "(expected navigate|arm_goto|gripper)",
+        )
 
     def _resolve_nav_goal(
         self, action: ActionPrimitive
-    ) -> tuple[float, float, float] | None:
+    ) -> tuple[tuple[float, float, float] | None, str]:
         zone = action.target_zone.strip()
         if zone:
             pose = self._zones.get(zone)
             if pose is None:
-                return None
-            return pose["x"], pose["y"], pose["theta"]
-        # Explicit map-frame goal when target_zone is empty.
-        return float(action.x), float(action.y), float(action.theta)
+                return None, f"navigate target_zone {zone!r} not in semantic map"
+            return (pose["x"], pose["y"], pose["theta"]), ""
+        if action.use_explicit_pose:
+            return (float(action.x), float(action.y), float(action.theta)), ""
+        return (
+            None,
+            "navigate primitive has no target_zone and use_explicit_pose is false",
+        )
 
     def _navigate(
         self, index: int, action: ActionPrimitive
     ) -> tuple[bool, str]:
-        goal = self._resolve_nav_goal(action)
+        goal, err = self._resolve_nav_goal(action)
         if goal is None:
-            zone = action.target_zone.strip()
-            return (
-                False,
-                f"step {index}: navigate target_zone {zone!r} not in semantic map",
-            )
+            return False, f"step {index}: {err}"
 
         gx, gy, gtheta = goal
         label = action.target_zone.strip() or f"({gx:.2f},{gy:.2f},{gtheta:.2f})"
-        self.get_logger().info(f"navigate to {label} -> ({gx:.2f}, {gy:.2f}, {gtheta:.2f})")
+        self.get_logger().info(
+            f"navigate to {label} -> ({gx:.2f}, {gy:.2f}, {gtheta:.2f})"
+        )
 
-        if self._pose() is None:
-            # Wait briefly for first odom.
-            deadline = time.monotonic() + 2.0
-            while self._pose() is None and time.monotonic() < deadline:
-                time.sleep(0.05)
-            if self._pose() is None:
-                return False, f"step {index}: no odometry on /mecanum_drive_controller/odometry"
-
-        period = 1.0 / NAV_RATE_HZ
-        start = time.monotonic()
+        period = Duration(seconds=1.0 / NAV_RATE_HZ)
+        timeout = Duration(seconds=NAV_TIMEOUT_SEC)
+        start = self.get_clock().now()
+        next_tick = start
         facing = False
 
-        while time.monotonic() - start < NAV_TIMEOUT_SEC:
+        while (self.get_clock().now() - start) < timeout:
             pose = self._pose()
             if pose is None:
-                time.sleep(period)
+                next_tick += period
+                self._sleep_until(next_tick)
                 continue
 
             dx = gx - pose["x"]
@@ -229,22 +266,31 @@ class TranslatorNode(Node):
                 if abs(yaw_err_face) < NAV_FACE_TOL or dist < NAV_POS_TOL:
                     facing = True
                 else:
-                    cmd.angular.z = _clamp(NAV_ANGULAR_GAIN * yaw_err_face, NAV_ANGULAR_MAX)
+                    cmd.angular.z = _clamp(
+                        NAV_ANGULAR_GAIN * yaw_err_face, NAV_ANGULAR_MAX
+                    )
             elif dist > NAV_POS_TOL:
-                # Keep a light heading correction while driving.
                 cmd.linear.x = _clamp(NAV_LINEAR_GAIN * dist, NAV_LINEAR_MAX)
-                cmd.angular.z = _clamp(0.5 * NAV_ANGULAR_GAIN * yaw_err_face, NAV_ANGULAR_MAX)
+                cmd.angular.z = _clamp(
+                    0.5 * NAV_ANGULAR_GAIN * yaw_err_face, NAV_ANGULAR_MAX
+                )
             elif abs(yaw_err_goal) > NAV_YAW_TOL:
-                cmd.angular.z = _clamp(NAV_ANGULAR_GAIN * yaw_err_goal, NAV_ANGULAR_MAX)
+                cmd.angular.z = _clamp(
+                    NAV_ANGULAR_GAIN * yaw_err_goal, NAV_ANGULAR_MAX
+                )
             else:
                 self._stop()
                 return True, ""
 
             self._cmd_pub.publish(cmd)
-            time.sleep(period)
+            next_tick += period
+            self._sleep_until(next_tick)
 
         self._stop()
-        return False, f"step {index}: navigate to {label} timed out after {NAV_TIMEOUT_SEC:.0f}s"
+        return (
+            False,
+            f"step {index}: navigate to {label} timed out after {NAV_TIMEOUT_SEC:.0f}s",
+        )
 
     def _wait_action_result(self, client, goal_msg, label: str, index: int):
         if not client.wait_for_server(timeout_sec=ACTION_SERVER_WAIT_SEC):

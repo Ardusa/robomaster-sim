@@ -83,6 +83,18 @@
         <button type="button" data-arm="grip_close">Close gripper</button>
       </div>
       <p id="gripper-label" class="hint">Gripper: —</p>
+
+      <h2>Command</h2>
+      <form id="command-form" class="command-form">
+        <label class="command-label">
+          Prompt
+          <input id="command-input" type="text" autocomplete="off"
+                 placeholder="go get the mug" />
+        </label>
+        <button type="submit">Run</button>
+      </form>
+      <ol id="command-sequence" class="command-sequence"></ol>
+      <p id="command-result" class="hint command-result">No command yet.</p>
     </section>
   </main>
 

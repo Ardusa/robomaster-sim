@@ -28,6 +28,7 @@
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>robomaster_gazebo</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
