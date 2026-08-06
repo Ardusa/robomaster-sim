@@ -1,0 +1,106 @@
+# Semantic map for modern_house.sdf. Zone names track rooms and furniture
+# that actually exist in the world; poses are clear-floor approach goals
+# (not model origins — those sit inside collision geometry).
+#
+# SDF anchors:
+#   robot_spawn        0.0  -6.2
+#   hall_console       0.0  -0.1
+#   coffee_table       4.0   0.2
+#   living_room_sofa   5.6   0.3
+#   media_console      2.1   0.4
+#   dining_table       2.15  3.65
+#   kitchen island     4.3   3.05
+#   kitchen north ctr  4.7   4.55
+#   north_bed         -4.8   3.25
+#   south_bed         -4.8  -3.15
+#   bathroom vanity    1.5  -4.35
+#   bathroom tub       3.35 -3.55
+zones:
+  # --- entry / hall ---
+  entry_apron:
+    # Outside the south doorway, near robot_spawn.
+    x: 0.0
+    y: -5.5
+    theta: 1.5708
+  hall_console:
+    # South of the hall plant console on the entry axis.
+    x: 0.0
+    y: -1.8
+    theta: 1.5708
+
+  # --- living room (east of hall) ---
+  living_room:
+    # Centre of the living rug, clear of the coffee table.
+    x: 3.2
+    y: -0.8
+    theta: 0.0
+  coffee_table:
+    # West of the coffee table, facing it.
+    x: 2.6
+    y: 0.2
+    theta: 0.0
+  living_room_sofa:
+    # In front of the sofa (sofa faces west from x=5.6).
+    x: 4.2
+    y: 0.3
+    theta: 0.0
+  media_console:
+    # East of the TV console, facing the screen.
+    x: 3.2
+    y: 0.4
+    theta: 3.1416
+
+  # --- kitchen / dining (northeast) ---
+  kitchen:
+    # Open floor on the kitchen_floor accent, south of the island.
+    x: 3.5
+    y: 2.2
+    theta: 1.5708
+  kitchen_island:
+    # South face of the island worktop.
+    x: 4.3
+    y: 2.2
+    theta: 1.5708
+  kitchen_counters:
+    # In front of the north counter run.
+    x: 4.7
+    y: 3.7
+    theta: 1.5708
+  dining_table:
+    # South of the dining table, facing it.
+    x: 2.15
+    y: 2.5
+    theta: 1.5708
+
+  # --- bedrooms (west wing) ---
+  north_bedroom:
+    # Open floor east of the north bed.
+    x: -3.2
+    y: 3.25
+    theta: 3.1416
+  north_bed:
+    # Closer approach to the north bed foot.
+    x: -3.4
+    y: 3.25
+    theta: 3.1416
+  south_bedroom:
+    # Open floor east of the south bed.
+    x: -3.2
+    y: -3.15
+    theta: 3.1416
+  south_bed:
+    x: -3.4
+    y: -3.15
+    theta: 3.1416
+
+  # --- bathroom (southeast) ---
+  bathroom:
+    # Inside the bathroom near the floor accent centre.
+    x: 2.2
+    y: -3.2
+    theta: 0.0
+  bathroom_vanity:
+    # North of the vanity/sink.
+    x: 1.5
+    y: -3.6
+    theta: -1.5708

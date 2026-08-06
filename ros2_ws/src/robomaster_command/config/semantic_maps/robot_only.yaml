@@ -1,0 +1,29 @@
+# Semantic map for robot_only.sdf. The world is an empty ground plane with
+# robot_spawn at the origin — no furniture — so zones are named open-floor
+# waypoints for command demos and for WORLD-switched bringup without editing
+# launch args by hand.
+#
+# SDF anchors:
+#   robot_spawn  0.0  0.0
+#   ground_plane 20x20 m
+zones:
+  origin:
+    x: 0.0
+    y: 0.0
+    theta: 0.0
+  north:
+    x: 0.0
+    y: 2.0
+    theta: 1.5708
+  east:
+    x: 2.0
+    y: 0.0
+    theta: 0.0
+  south:
+    x: 0.0
+    y: -2.0
+    theta: -1.5708
+  west:
+    x: -2.0
+    y: 0.0
+    theta: 3.1416
