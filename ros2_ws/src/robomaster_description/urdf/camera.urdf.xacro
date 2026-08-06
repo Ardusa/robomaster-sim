@@ -107,7 +107,8 @@
       </gazebo>
 
       <!-- Dashboard top-down: follows the chassis from above. Pixels only.
-           Gazebo looks along +X, so pitch -90 aims the sensor at the floor. -->
+           Gazebo looks along sensor +X. URDF Ry(+π/2) maps that to base -Z
+           (down); Ry(-π/2) incorrectly aimed at the sky (blank gray feed). -->
       <link name="${tf_prefix}overview_camera_link">
         <inertial>
           <origin xyz="0 0 0" rpy="0 0 0" />
@@ -116,7 +117,7 @@
         </inertial>
       </link>
       <joint name="${tf_prefix}overview_camera_joint" type="fixed">
-        <origin xyz="0 0 2.0" rpy="0 -1.5708 0" />
+        <origin xyz="0 0 2.0" rpy="0 1.5708 0" />
         <parent link="${tf_prefix}base_link" />
         <child link="${tf_prefix}overview_camera_link" />
       </joint>

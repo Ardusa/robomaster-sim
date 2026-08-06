@@ -34,11 +34,10 @@ from std_msgs.msg import String
 from robomaster_arm.action import MoveArm, SetGripper
 from robomaster_arm.msg import ArmState, GripperState
 
-# Match teleop_node.py so the dashboard feels the same as the keyboard fallback.
+# Keep in sync with robomaster_arm/scripts/arm_kinematics.py PRESETS.
 PRESETS = {
-    "tuck": (0.059, 0.190),
-    "reach": (0.159, 0.171),
-    "raise": (0.023, 0.229),
+    "tuck": (-0.10, 0.16),
+    "extend": (0.105, 0.142),
 }
 JOG = 0.02
 DEFAULT_SPEED = 0.3
@@ -48,7 +47,7 @@ STATE_HZ = 20.0
 
 # Workspace envelope for the arm setpoint UI (metres in arm_base_link).
 ARM_LIMITS = {
-    "x_min": -0.05,
+    "x_min": -0.16,
     "x_max": 0.24,
     "z_min": 0.05,
     "z_max": 0.26,

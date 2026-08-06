@@ -135,7 +135,7 @@ import { createRobot3d } from "./robot3d.js";
       driveJoy.setLocked(false);
       armJoy.setLocked(false);
       gamepadLabel.textContent =
-        "No gamepad — drag sticks · A/B/X presets · LT/RT turn when connected.";
+        "No gamepad — drag sticks · A=tuck · B=extend · LT/RT=turn when connected.";
       const lx = applyDeadzone(-driveJoy.stick.y);
       const ly = applyDeadzone(-driveJoy.stick.x);
       if (lx === 0 && ly === 0) {
@@ -150,7 +150,7 @@ import { createRobot3d } from "./robot3d.js";
     driveJoy.setLocked(true);
     armJoy.setLocked(true);
     gamepadLabel.textContent =
-      `Gamepad: ${pad.id} · left=drive · right=arm · LT/RT=turn · A/B/X=presets · LB/RB=gripper`;
+      `Gamepad: ${pad.id} · left=drive · right=arm · LT/RT=turn · A=tuck · B=extend · LB/RB=gripper`;
 
     const lx = applyDeadzone(-(pad.axes[1] || 0));
     const ly = applyDeadzone(-(pad.axes[0] || 0));
@@ -169,10 +169,9 @@ import { createRobot3d } from "./robot3d.js";
 
     jogArmFromStick(rax, ray);
 
-    // Face buttons: A=0 B=1 X=2 → presets (Y unused).
+    // Face buttons: A=tuck, B=extend.
     if (pad.buttons[0]?.pressed) sendArm("preset_tuck");
-    if (pad.buttons[1]?.pressed) sendArm("preset_reach");
-    if (pad.buttons[2]?.pressed) sendArm("preset_raise");
+    if (pad.buttons[1]?.pressed) sendArm("preset_extend");
     if (pad.buttons[4]?.pressed) sendArm("grip_open");
     if (pad.buttons[5]?.pressed) sendArm("grip_close");
     // D-pad up/down = fine arm jog (left/right already used for yaw).

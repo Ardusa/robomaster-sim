@@ -113,7 +113,9 @@ class ArmNode(Node):
             return
         arm_1, arm_2, _ = solve(*self._home)
         self._arm_cmd.publish(Float64MultiArray(data=[arm_1, arm_2]))
-        self._gripper_cmd.publish(Float64MultiArray(data=[GRIPPER_OPEN]))
+        self._gripper_cmd.publish(
+            Float64MultiArray(data=[GRIPPER_OPEN, -GRIPPER_OPEN])
+        )
         self._homed = True
         self._home_timer.cancel()
         self.get_logger().info(
@@ -280,7 +282,9 @@ class ArmNode(Node):
 
         if self.sim:
             target = GRIPPER_OPEN if open_cmd else GRIPPER_CLOSED
-            self._gripper_cmd.publish(Float64MultiArray(data=[target]))
+            self._gripper_cmd.publish(
+                Float64MultiArray(data=[target, -target])
+            )
             deadline = time.monotonic() + 3.0
             while rclpy.ok() and time.monotonic() < deadline:
                 if goal_handle.is_cancel_requested:

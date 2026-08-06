@@ -5,9 +5,8 @@
 #
 # Columns: link  mass_kg  mesh  [mesh_origin_x y z]
 #
-# Serial-equivalent model: decorative parallelogram rods are omitted from the
-# URDF (and from this list). gripper_m_link carries the finger meshes as
-# visuals/collisions with a nominal inertia in the xacro.
+# Parallel-jaw model: gripper_m_link / gripper_r_link carry the finger meshes
+# with nominal inertias in the xacro (tips only collide).
 
 # --- arm ---
 arm_base_link          0.3    meshes/arm_base_collision.dae          -0.002098   -0.0004909   0.0073523

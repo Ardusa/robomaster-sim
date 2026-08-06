@@ -1,9 +1,12 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro">
 
-  <!-- Serial-equivalent gripper: one prismatic opening DoF. The real fingers
-       are a five-bar loop Fortress cannot close; finger meshes ride on the
-       slider so open/close is physical and graspable without free hinges. -->
+  <!-- Parallel-jaw approximation of the EP gripper. The real fingers are a
+       five-bar loop Fortress cannot close; instead each finger rides a
+       prismatic joint along ±Y. Mesh origins are the CAD assembly poses
+       (absolute in gripper_link) from the old welded chain. Command interface
+       stays gripper_m_joint in [-0.023, 0.001]; the right finger is driven as
+       the negation so open/close pinches instead of sliding in X. -->
 
   <xacro:macro name="gripper" params="tf_prefix=''">
 
@@ -31,37 +34,127 @@
       </collision>
     </link>
 
+    <!-- Left finger (+Y). Origins are CAD poses relative to gripper_link. -->
     <link name="${tf_prefix}gripper_m_link">
       <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.02" />
+        <origin xyz="0.056 0.0174 -0.04" rpy="0 0 0" />
+        <mass value="0.01" />
         <inertia ixx="1e-06" ixy="0" ixz="0" iyy="1e-06" iyz="0" izz="1e-06" />
       </inertial>
+      <visual name="left_gripper_1">
+        <origin xyz="0.016288 0.0212844 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_1.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="left_gripper_2">
+        <origin xyz="0.0512092 0.0308838 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_2.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="left_gripper_4">
+        <origin xyz="0.0424553 0.054828 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_4.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="left_gripper_5">
+        <origin xyz="0.0810217 0.0649668 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_5.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="left_gripper_6">
+        <origin xyz="0.0712893 0.0340313 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_6.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
       <visual name="left_gripper_7">
-        <origin xyz="-0.0153264 -0.0166317 -1.83e-05" rpy="0 0 0" />
+        <origin xyz="0.056 0.0174005 -0.0399426" rpy="0 0 0" />
         <geometry>
           <mesh filename="package://robomaster_description/meshes/gripper_left_7.dae"
             scale="1.0 1.0 1.0" />
         </geometry>
         <material name="EP_up.001" />
       </visual>
+      <collision name="left_gripper_collision">
+        <origin xyz="0.0564138 0.0172595 -0.0695631" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/gripper_left_collision.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Right finger (−Y via commanded negation of gripper_m_joint). -->
+    <link name="${tf_prefix}gripper_r_link">
+      <inertial>
+        <origin xyz="0.056 -0.0174 -0.04" rpy="0 0 0" />
+        <mass value="0.01" />
+        <inertia ixx="1e-06" ixy="0" ixz="0" iyy="1e-06" iyz="0" izz="1e-06" />
+      </inertial>
+      <visual name="right_gripper_1">
+        <origin xyz="0.0162882 -0.0210593 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/right_gripper_1.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="right_gripper_2">
+        <origin xyz="0.0503628 -0.0319088 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/right_gripper_2.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="right_gripper_4">
+        <origin xyz="0.0423206 -0.0550362 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/right_gripper_4.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="right_gripper_5">
+        <origin xyz="0.080887 -0.0651751 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/right_gripper_5.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
+      <visual name="right_gripper_6">
+        <origin xyz="0.0558574 -0.0180441 -0.0399426" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://robomaster_description/meshes/right_gripper_6.dae"
+            scale="1.0 1.0 1.0" />
+        </geometry>
+        <material name="EP_up.001" />
+      </visual>
       <visual name="right_gripper_7">
-        <origin xyz="-3.72e-05 9e-07 -1.83e-05" rpy="0 0 0" />
+        <origin xyz="0.0711547 -0.0342395 -0.0399426" rpy="0 0 0" />
         <geometry>
           <mesh filename="package://robomaster_description/meshes/right_gripper_7.dae"
             scale="1.0 1.0 1.0" />
         </geometry>
         <material name="EP_up.001" />
       </visual>
-      <collision name="left_gripper_collision">
-        <origin xyz="-0.0149126 -0.0167727 -0.0296388" rpy="0 0 0" />
-        <geometry>
-          <mesh filename="package://robomaster_description/meshes/gripper_left_collision.dae"
-            scale="1.0 1.0 1.0" />
-        </geometry>
-      </collision>
       <collision name="right_gripper_7_collision">
-        <origin xyz="-0.0150056 0.0168496 -0.0296388" rpy="0 0 0" />
+        <origin xyz="0.0561863 -0.0173908 -0.0695631" rpy="0 0 0" />
         <geometry>
           <mesh filename="package://robomaster_description/meshes/right_gripper_7_collision.dae"
             scale="1.0 1.0 1.0" />
@@ -83,13 +176,23 @@
       <child link="${tf_prefix}gripper_link" />
     </joint>
 
-    <!-- 0 = open (extended), more negative = closed. Matches old travel. -->
+    <!-- 0.001 = open (wider), -0.023 = closed (pinch). Axis +Y. -->
     <joint name="${tf_prefix}gripper_m_joint" type="prismatic">
       <origin xyz="0 0 0" rpy="0 0 0" />
       <parent link="${tf_prefix}gripper_link" />
       <child link="${tf_prefix}gripper_m_link" />
-      <axis xyz="-1 0 0" />
+      <axis xyz="0 1 0" />
       <limit lower="-0.023" upper="0.001" effort="20.0" velocity="0.05" />
+      <dynamics damping="1.0" friction="0.5" />
+    </joint>
+
+    <!-- Commanded as -gripper_m_joint so fingers move toward each other. -->
+    <joint name="${tf_prefix}gripper_r_joint" type="prismatic">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <parent link="${tf_prefix}gripper_link" />
+      <child link="${tf_prefix}gripper_r_link" />
+      <axis xyz="0 1 0" />
+      <limit lower="-0.001" upper="0.023" effort="20.0" velocity="0.05" />
       <dynamics damping="1.0" friction="0.5" />
     </joint>
 

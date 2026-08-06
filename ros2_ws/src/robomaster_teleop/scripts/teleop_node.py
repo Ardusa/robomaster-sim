@@ -37,9 +37,8 @@ Chassis (holonomic):
 Arm (Cartesian jog, metres):
   t/g : +x / -x (forward)
   y/h : +z / -z (up)
-  1   : tuck-ish preset
-  2   : reach forward
-  3   : raise
+  1   : tuck
+  2   : extend
   [ / ] : gripper open / close
 
 CTRL-C to quit
@@ -67,8 +66,7 @@ MOVE_BINDINGS = {
     "y": "arm_z+",
     "h": "arm_z-",
     "1": "preset_tuck",
-    "2": "preset_reach",
-    "3": "preset_raise",
+    "2": "preset_extend",
     "[": "grip_open",
     "]": "grip_close",
 }
@@ -82,12 +80,10 @@ SPEED_BINDINGS = {
     "c": (1.0, 0.9),
 }
 
-# Chosen from joint pairs known to be inside arm_1/arm_2 limits, not just
-# inside the reach radius: (0.18, 0.10) looks reachable but needs arm_1 > max.
+# Keep in sync with robomaster_arm/scripts/arm_kinematics.py PRESETS.
 PRESETS = {
-    "preset_tuck": (0.059, 0.190),
-    "preset_reach": (0.159, 0.171),
-    "preset_raise": (0.023, 0.229),
+    "preset_tuck": (-0.10, 0.16),
+    "preset_extend": (0.105, 0.142),
 }
 
 JOG = 0.02  # metres per keypress

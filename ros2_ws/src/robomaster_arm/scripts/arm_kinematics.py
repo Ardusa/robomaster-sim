@@ -15,7 +15,9 @@ from typing import List, Optional, Tuple
 L1 = 0.121
 L2 = 0.120
 
-ARM1_MIN = -0.274
+# Shoulder min was -0.274 (~-16 deg), which blocked a real tuck (arm folded
+# back). -0.70 (~-40 deg) still clears the chassis and reaches x ≈ -0.20 m.
+ARM1_MIN = -0.70
 ARM1_MAX = 1.384
 ARM2_MIN = -1.8
 ARM2_MAX = 0.35
@@ -29,6 +31,13 @@ R_EPS = 0.004
 
 GRIPPER_OPEN = 0.001
 GRIPPER_CLOSED = -0.023
+
+# Named Cartesian presets (metres in arm_base_link: +x forward, +z up).
+# Shared by teleop + dashboard so the buttons mean the same thing everywhere.
+PRESETS = {
+    "tuck": (-0.10, 0.16),  # folded back; needs ARM1_MIN <= -0.70
+    "extend": (0.105, 0.142),  # measured useful forward pose
+}
 
 # Pose the sim arm is driven to at startup so jogging has room in every
 # direction (joint zeros sit on the singularity).

@@ -15,6 +15,7 @@ const JOINT_NAMES = [
   "arm_1_joint",
   "arm_2_joint",
   "gripper_m_joint",
+  "gripper_r_joint",
 ];
 
 export function createRobot3d(container, { loadingEl, resetBtn } = {}) {
@@ -150,17 +151,25 @@ export function createRobot3d(container, { loadingEl, resetBtn } = {}) {
     }
   }
 
+  function setJoint(name, value) {
+    const j = robot.joints?.[name];
+    if (j && typeof robot.setJointValue === "function") {
+      robot.setJointValue(name, value);
+    } else if (j && typeof j.setJointValue === "function") {
+      j.setJointValue(value);
+    }
+  }
+
   function onState(state) {
     if (!robot || !state) return;
     const joints = state.joints || {};
     for (const name of JOINT_NAMES) {
       if (joints[name] == null) continue;
-      const j = robot.joints?.[name];
-      if (j && typeof robot.setJointValue === "function") {
-        robot.setJointValue(name, joints[name]);
-      } else if (j && typeof j.setJointValue === "function") {
-        j.setJointValue(joints[name]);
-      }
+      setJoint(name, joints[name]);
+    }
+    // Right finger is commanded as -left; synthesize if joint_states omit it.
+    if (joints.gripper_m_joint != null && joints.gripper_r_joint == null) {
+      setJoint("gripper_r_joint", -joints.gripper_m_joint);
     }
 
     // Keep the robot pinned at the widget origin. Odometry describes travel

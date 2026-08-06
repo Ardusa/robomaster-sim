@@ -29,6 +29,7 @@ gripper_controller:
   ros__parameters:
     joints:
       - gripper_m_joint
+      - gripper_r_joint
 
 mecanum_drive_controller:
   ros__parameters:
