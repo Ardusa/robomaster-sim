@@ -35,9 +35,9 @@ endif
 DC   := docker compose $(COMPOSE_FILES)
 EXEC := $(DC) exec robomaster-sim bash -c
 
-RAW_URL       := http://localhost:8080/stream?topic=/camera/image_raw
-TAGS_URL      := http://localhost:8080/stream?topic=/camera/image_annotated
-DASHBOARD_URL := http://localhost:8090
+RAW_URL        := http://localhost:8080/stream?topic=/camera/image_raw
+ANNOTATED_URL  := http://localhost:8080/stream?topic=/camera/image_annotated
+DASHBOARD_URL  := http://localhost:8090
 ifeq ($(UNAME_S),Darwin)
   OPEN_CMD := open
 else ifeq ($(OS),Windows_NT)
@@ -51,7 +51,7 @@ SETUP := source /opt/ros/humble/setup.bash && cd /root/ros2_ws && [ -f install/s
 # Session orchestration lives in scripts/bringup.sh (profiles: full|teleop|…).
 BRINGUP := \
 	DC="$(DC)" SETUP="$(SETUP)" HEADLESS="$(HEADLESS)" \
-	RAW_URL="$(RAW_URL)" TAGS_URL="$(TAGS_URL)" DASHBOARD_URL="$(DASHBOARD_URL)" \
+	RAW_URL="$(RAW_URL)" ANNOTATED_URL="$(ANNOTATED_URL)" DASHBOARD_URL="$(DASHBOARD_URL)" \
 	OPEN_CMD="$(OPEN_CMD)" \
 	bash scripts/bringup.sh
 
@@ -104,7 +104,7 @@ endif
 bringup-teleop: build ## Drivetrain + arm (bg) + keyboard teleop (fg fallback)
 	@$(BRINGUP) teleop
 
-bringup-detection: build ## Camera + AprilTag detection (no teleop)
+bringup-detection: build ## Camera + COCO object detection (no teleop)
 	@$(BRINGUP) detection
 
 bringup-camera: build ## Camera only — is the camera alive?

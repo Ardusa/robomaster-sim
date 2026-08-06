@@ -2,7 +2,7 @@
 """Decodes the RoboMaster EP's H.264 stream into sensor_msgs/Image.
 
 The tether-side counterpart to the Gazebo camera sensor: publishes the same
-/camera/image_raw + /camera/camera_info pair, so apriltag_node and the overlay
+/camera/image_raw + /camera/camera_info pair, so object detection and the overlay
 work against either backend unchanged.
 
 Someone has to send "stream on" over the control port, which takes one client

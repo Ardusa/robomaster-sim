@@ -10,7 +10,7 @@ profile="${1:?usage: bringup.sh <full|teleop|camera|detection>}"
 : "${SETUP:?SETUP must be set}"
 
 RAW_URL="${RAW_URL:-http://localhost:8080/stream?topic=/camera/image_raw}"
-TAGS_URL="${TAGS_URL:-http://localhost:8080/stream?topic=/camera/image_annotated}"
+ANNOTATED_URL="${ANNOTATED_URL:-${TAGS_URL:-http://localhost:8080/stream?topic=/camera/image_annotated}}"
 DASHBOARD_URL="${DASHBOARD_URL:-http://localhost:8090}"
 OPEN_CMD="${OPEN_CMD:-}"
 HEADLESS="${HEADLESS:-}"
@@ -40,9 +40,8 @@ cleanup() {
      pkill -f \"[r]os2 launch robomaster_bringup\" || true; \
      pkill -f \"[w]eb_video_server\" || true; \
      pkill -f \"[c]md_vel_mux.py\" || true; \
-     pkill -f \"[a]priltag\" || true; \
-     pkill -f \"[t]ag_overlay\" || true; \
-     pkill -f \"[r]ectify\" || true; \
+     pkill -f \"[o]bject_detector\" || true; \
+     pkill -f \"[d]etection_overlay\" || true; \
      pkill -f \"[r]os_gz_sim create\" || true; \
      pkill -f \"[i]gn gazebo\" || true; \
      pkill -f \"[s]dk_bridge_node\" || true; \
@@ -89,7 +88,7 @@ case "${profile}" in
   full)
     echo "  dashboard: ${DASHBOARD_URL}"
     echo "  camera:    ${RAW_URL}"
-    echo "  tags:      ${TAGS_URL}"
+    echo "  detect:    ${ANNOTATED_URL}"
     $DC exec -d robomaster-sim bash -c ": rmbringup=${session}; ${SETUP} \
       ${LAUNCH} control:=true arm:=true camera:=true detection:=true \
       video_server:=true dashboard:=true > /tmp/bringup_stack.log 2>&1"
@@ -109,12 +108,12 @@ case "${profile}" in
       ros2 run robomaster_teleop teleop_node.py" || true
     ;;
   detection)
-    echo "  watch: ${TAGS_URL}"
-    open_url "${TAGS_URL}"
+    echo "  watch: ${ANNOTATED_URL}"
+    open_url "${ANNOTATED_URL}"
     $DC exec -d robomaster-sim bash -c ": rmbringup=${session}; ${SETUP} \
       ${LAUNCH} control:=false arm:=false camera:=true detection:=true \
       video_server:=true dashboard:=false > /tmp/detection_stack.log 2>&1"
-    wait_ready /tmp/detection_stack.log 'apriltag|web_video_server'
+    wait_ready /tmp/detection_stack.log 'object_detector' 'web_video_server'
     echo "  detection stack up — Ctrl-C to stop."
     $DC exec robomaster-sim bash -c "tail -f /tmp/detection_stack.log" || true
     ;;

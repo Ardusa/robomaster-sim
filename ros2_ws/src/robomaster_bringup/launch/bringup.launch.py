@@ -153,7 +153,7 @@ def generate_launch_description():
                 "detection",
                 default_value="true",
                 choices=["true", "false"],
-                description="AprilTag detection + overlay.",
+                description="COCO object detection + overlay.",
             ),
             DeclareLaunchArgument(
                 "headless",

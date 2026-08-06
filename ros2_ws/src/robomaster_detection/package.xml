@@ -3,25 +3,20 @@
 <package format="3">
   <name>robomaster_detection</name>
   <version>0.0.1</version>
-  <description>AprilTag detection and debug overlay for the RoboMaster EP.
+  <description>COCO object detection and debug overlay for the RoboMaster EP.
 
     Interprets pixels; acquiring them is robomaster_camera's job (real robot) or
-    the Gazebo camera sensor's (sim). Consumes the /camera/image_raw +
-    /camera/camera_info pair and depends on neither producer, so it can't tell
-    them apart and doesn't need to.</description>
+    the Gazebo camera sensor's (sim). Consumes /camera/image_raw and depends on
+    neither producer, so it can't tell them apart and doesn't need to.</description>
   <maintainer email="ardusa05@gmail.com">Ardusa</maintainer>
   <license>MIT</license>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>vision_msgs</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
-  <exec_depend>message_filters</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
-  <exec_depend>apriltag_ros</exec_depend>
-  <exec_depend>apriltag_msgs</exec_depend>
-  <exec_depend>image_proc</exec_depend>
-  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -13,7 +13,14 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
-        (os.path.join("share", package_name, "www"), glob("www/*")),
+        (
+            os.path.join("share", package_name, "www"),
+            [f for f in glob("www/*") if os.path.isfile(f)],
+        ),
+        (
+            os.path.join("share", package_name, "www", "js"),
+            [f for f in glob("www/js/*") if os.path.isfile(f)],
+        ),
     ],
     install_requires=["setuptools", "aiohttp"],
     zip_safe=True,

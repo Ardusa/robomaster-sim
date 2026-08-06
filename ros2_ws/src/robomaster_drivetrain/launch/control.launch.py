@@ -5,7 +5,7 @@ the same name, so the spawners don't care which one is there.
 
     teleop   -> /cmd_vel_teleop   --\\
                                      cmd_vel_mux -> mecanum_drive_controller
-    apriltag -> /cmd_vel_autonomy --/
+    autonomy -> /cmd_vel_autonomy --/
 
 To add a new way to drive the robot, add a topic to config/twist_mux.yaml —
 the controller and driver stay untouched.

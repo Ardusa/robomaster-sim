@@ -1,28 +1,38 @@
 #!/usr/bin/env python3
-"""Operator dashboard: static UI + WebSocket teleop bridge.
+"""Operator dashboard: static UI + WebSocket teleop / state bridge.
 
 Serves the www/ UI on :8090. Browser clients send twist / arm commands over a
 WebSocket; this node publishes /cmd_vel_teleop and calls robomaster_arm actions.
 Layout (sim vs tether) is chosen from $SIM via GET /api/config.
+
+Also streams live robot state (joints, odom, arm, gripper) back to clients and
+serves the processed URDF plus CAD meshes for the 3D reconstruction widget.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import threading
 import time
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from aiohttp import web
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import JointState
+from std_msgs.msg import String
 
 from robomaster_arm.action import MoveArm, SetGripper
+from robomaster_arm.msg import ArmState, GripperState
 
 # Match teleop_node.py so the dashboard feels the same as the keyboard fallback.
 PRESETS = {
@@ -34,6 +44,15 @@ JOG = 0.02
 DEFAULT_SPEED = 0.3
 DEFAULT_TURN = 0.8
 DEADMAN_SEC = 0.4
+STATE_HZ = 20.0
+
+# Workspace envelope for the arm setpoint UI (metres in arm_base_link).
+ARM_LIMITS = {
+    "x_min": -0.05,
+    "x_max": 0.24,
+    "z_min": 0.05,
+    "z_max": 0.26,
+}
 
 
 class DashboardNode(Node):
@@ -51,6 +70,8 @@ class DashboardNode(Node):
         self._last_cmd = 0.0
         # Not named _clients: rclpy.Node.clients is a generator of service clients.
         self._ws_count = 0
+        self._ws_clients: Set[web.WebSocketResponse] = set()
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
         self.create_timer(0.05, self._deadman_tick)
 
@@ -65,9 +86,123 @@ class DashboardNode(Node):
             # Symlink-install / source-tree fallback during development.
             self._www = Path(__file__).resolve().parent.parent / "www"
 
+        try:
+            desc_share = Path(get_package_share_directory("robomaster_description"))
+            self._mesh_dir = desc_share / "meshes"
+        except Exception:  # noqa: BLE001
+            self._mesh_dir = Path()
+            self.get_logger().warning("robomaster_description share not found; /meshes/ disabled")
+
+        # --- State aggregator ---
+        self._robot_description = ""
+        self._joints: Dict[str, float] = {}
+        self._authoritative_joints: Set[str] = set()
+        self._odom: Optional[Dict[str, float]] = None
+        self._arm: Optional[Dict[str, Any]] = None
+        self._gripper_state: Optional[Dict[str, Any]] = None
+
+        latched = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        self.create_subscription(String, "/robot_description", self._on_robot_description, latched)
+        self.create_subscription(JointState, "/joint_states", self._on_joint_states, 10)
+        self.create_subscription(
+            Odometry, "/mecanum_drive_controller/odometry", self._on_odom, 10
+        )
+        self.create_subscription(ArmState, "/robomaster_arm/arm_state", self._on_arm_state, 10)
+        self.create_subscription(
+            GripperState, "/robomaster_arm/gripper_state", self._on_gripper_state, 10
+        )
+
         self.get_logger().info(
             f"dashboard on :{self._port} (sim={self._sim}, www={self._www})"
         )
+
+    # ------------------------------------------------------------------ ROS callbacks
+
+    def _on_robot_description(self, msg: String) -> None:
+        with self._lock:
+            self._robot_description = msg.data
+
+    def _on_joint_states(self, msg: JointState) -> None:
+        # Prefer joint_state_broadcaster (non-empty velocity) over the
+        # joint_state_publisher zeros that otherwise flicker the wheels.
+        authoritative = len(msg.velocity) > 0
+        with self._lock:
+            for i, name in enumerate(msg.name):
+                if i >= len(msg.position):
+                    break
+                if authoritative:
+                    self._joints[name] = float(msg.position[i])
+                    self._authoritative_joints.add(name)
+                elif name not in self._authoritative_joints:
+                    self._joints[name] = float(msg.position[i])
+
+    def _on_odom(self, msg: Odometry) -> None:
+        p = msg.pose.pose.position
+        q = msg.pose.pose.orientation
+        # Yaw from quaternion (ROS ENU, z-up).
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+        with self._lock:
+            self._odom = {
+                "x": float(p.x),
+                "y": float(p.y),
+                "z": float(p.z),
+                "yaw": float(yaw),
+            }
+
+    def _on_arm_state(self, msg: ArmState) -> None:
+        with self._lock:
+            self._arm = {
+                "x": float(msg.x),
+                "z": float(msg.z),
+                "arm_1": float(msg.arm_1),
+                "arm_2": float(msg.arm_2),
+                "moving": bool(msg.moving),
+            }
+            if not self._sim:
+                # Tether ros2_control has no arm joints — overlay from ArmState.
+                self._joints["arm_1_joint"] = float(msg.arm_1)
+                self._joints["arm_2_joint"] = float(msg.arm_2)
+                self._authoritative_joints.add("arm_1_joint")
+                self._authoritative_joints.add("arm_2_joint")
+
+    def _on_gripper_state(self, msg: GripperState) -> None:
+        with self._lock:
+            self._gripper_state = {
+                "state": int(msg.state),
+                "opening": float(msg.opening),
+            }
+            if not self._sim:
+                self._joints["gripper_m_joint"] = float(msg.opening)
+                self._authoritative_joints.add("gripper_m_joint")
+
+    def state_payload(self) -> Dict[str, Any]:
+        with self._lock:
+            return {
+                "type": "state",
+                "sim": self._sim,
+                "fidelity": "ground_truth" if self._sim else "estimated",
+                "joints": dict(self._joints),
+                "odom": None if self._odom is None else dict(self._odom),
+                "arm": None if self._arm is None else dict(self._arm),
+                "gripper": (
+                    None
+                    if self._gripper_state is None
+                    else dict(self._gripper_state)
+                ),
+            }
+
+    def robot_description(self) -> str:
+        with self._lock:
+            return self._robot_description
+
+    # ------------------------------------------------------------------ Teleop
 
     def _deadman_tick(self) -> None:
         with self._lock:
@@ -157,7 +292,22 @@ class DashboardNode(Node):
         elif action == "grip_close":
             self._gripper(False)
 
+    def handle_arm_goto(self, x: float, z: float) -> None:
+        self._arm_goal(x, z, True)
+
     def config_dict(self) -> dict:
+        if self._sim:
+            primary = {
+                "slot": "primary",
+                "topic": "/camera/overview",
+                "title": "Overhead View",
+            }
+        else:
+            primary = {
+                "slot": "primary",
+                "topic": "/camera/image_raw",
+                "title": "Robot Camera",
+            }
         return {
             "sim": self._sim,
             "video_base": self._video_base,
@@ -166,9 +316,40 @@ class DashboardNode(Node):
                 "overview": "/camera/overview",
                 "annotated": "/camera/image_annotated",
             },
+            "cameras": [
+                primary,
+                {
+                    "slot": "annotated",
+                    "topic": "/camera/image_annotated",
+                    "title": "Annotated Detections",
+                },
+            ],
+            "presets": {name: {"x": xz[0], "z": xz[1]} for name, xz in PRESETS.items()},
+            "arm_limits": dict(ARM_LIMITS),
             "speed": DEFAULT_SPEED,
             "turn": DEFAULT_TURN,
         }
+
+    # ------------------------------------------------------------------ WS helpers
+
+    def register_ws(self, ws: web.WebSocketResponse) -> int:
+        with self._lock:
+            self._ws_clients.add(ws)
+            self._ws_count = len(self._ws_clients)
+            return self._ws_count
+
+    def unregister_ws(self, ws: web.WebSocketResponse) -> int:
+        with self._lock:
+            self._ws_clients.discard(ws)
+            self._ws_count = len(self._ws_clients)
+            return self._ws_count
+
+    def ws_snapshot(self) -> List[web.WebSocketResponse]:
+        with self._lock:
+            return list(self._ws_clients)
+
+    def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
 
 
 def _build_app(node: DashboardNode) -> web.Application:
@@ -180,12 +361,20 @@ def _build_app(node: DashboardNode) -> web.Application:
     async def api_config(_request: web.Request) -> web.Response:
         return web.json_response(node.config_dict())
 
+    async def api_robot_description(_request: web.Request) -> web.Response:
+        urdf = node.robot_description()
+        if not urdf:
+            return web.Response(
+                status=503,
+                text="robot_description not available yet",
+                content_type="text/plain",
+            )
+        return web.Response(text=urdf, content_type="application/xml")
+
     async def ws_handler(request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(heartbeat=20)
         await ws.prepare(request)
-        with node._lock:
-            node._ws_count += 1
-            connected = node._ws_count
+        connected = node.register_ws(ws)
         node.get_logger().info(f"dashboard client connected ({connected})")
         try:
             async for msg in ws:
@@ -213,26 +402,58 @@ def _build_app(node: DashboardNode) -> web.Application:
                         await asyncio.get_event_loop().run_in_executor(
                             None, node.handle_arm, action
                         )
+                elif kind == "arm_goto":
+                    try:
+                        x = float(data.get("x"))
+                        z = float(data.get("z"))
+                    except (TypeError, ValueError):
+                        continue
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, node.handle_arm_goto, x, z
+                    )
         finally:
-            with node._lock:
-                node._ws_count = max(0, node._ws_count - 1)
-                remaining = node._ws_count
+            remaining = node.unregister_ws(ws)
             node.stop()
             node.get_logger().info(f"dashboard client disconnected ({remaining})")
         return ws
 
-    async def app_js(_request: web.Request) -> web.FileResponse:
-        return web.FileResponse(node._www / "app.js")
+    app.router.add_get("/", index)
+    app.router.add_get("/api/config", api_config)
+    app.router.add_get("/api/robot_description", api_robot_description)
+    app.router.add_get("/ws", ws_handler)
 
+    # Meshes first so the prefix is not shadowed by a www catch-all.
+    if node._mesh_dir.is_dir():
+        app.router.add_static(
+            "/meshes/", node._mesh_dir, name="meshes", follow_symlinks=True
+        )
+
+    # Static assets: style.css at root, JS modules under /js/.
     async def style_css(_request: web.Request) -> web.FileResponse:
         return web.FileResponse(node._www / "style.css")
 
-    app.router.add_get("/", index)
-    app.router.add_get("/api/config", api_config)
-    app.router.add_get("/ws", ws_handler)
-    app.router.add_get("/app.js", app_js)
     app.router.add_get("/style.css", style_css)
+    js_dir = node._www / "js"
+    if js_dir.is_dir():
+        app.router.add_static("/js/", js_dir, name="js", follow_symlinks=True)
+
     return app
+
+
+async def _broadcast_state(node: DashboardNode) -> None:
+    period = 1.0 / STATE_HZ
+    while rclpy.ok():
+        payload = json.dumps(node.state_payload())
+        for ws in node.ws_snapshot():
+            if ws.closed:
+                continue
+            try:
+                await ws.send_str(payload)
+            except ConnectionResetError:
+                pass
+            except Exception:  # noqa: BLE001
+                pass
+        await asyncio.sleep(period)
 
 
 def main() -> None:
@@ -242,6 +463,7 @@ def main() -> None:
     app = _build_app(node)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    node.set_loop(loop)
 
     async def ros_spin() -> None:
         # Cooperative spin alongside aiohttp — avoids a second executor thread
@@ -257,11 +479,17 @@ def main() -> None:
         await site.start()
         node.get_logger().info(f"listening on 0.0.0.0:{node._port}")
         spin_task = asyncio.create_task(ros_spin())
+        state_task = asyncio.create_task(_broadcast_state(node))
         try:
             await spin_task
         except asyncio.CancelledError:
             pass
         finally:
+            state_task.cancel()
+            try:
+                await state_task
+            except asyncio.CancelledError:
+                pass
             node.stop()
             await runner.cleanup()
 

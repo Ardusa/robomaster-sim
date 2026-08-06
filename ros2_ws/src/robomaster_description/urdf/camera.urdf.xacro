@@ -60,14 +60,13 @@
       <child link="camera_optical_link"/>
     </joint> -->
 
-    <!-- Topics match camera_node.py's defaults so apriltag_node can't tell sim
+    <!-- Topics match camera_node.py's defaults so detection can't tell sim
          from the real stream. The sensor hangs off camera_optical_link so its
-         images are stamped in the frame apriltag pose estimation assumes. -->
+         images use the ROS optical frame convention. -->
     <xacro:if value="${sim}">
       <!-- sdformat lumps fixed-joint children into their parent, which deletes
            camera_optical_link. The sensor itself survives that, but its frame
-           doesn't - and apriltag poses are only correct against the optical
-           frame. Verified: without this, `ign sdf -p` emits no
+           doesn't. Verified: without this, `ign sdf -p` emits no
            <link name='camera_optical_link'>. -->
       <gazebo reference="${tf_prefix}camera_optical_joint">
         <preserveFixedJoint>true</preserveFixedJoint>
@@ -83,8 +82,7 @@
                right and renders upside down, because the optical frame's +X is
                the image's right edge and its +Z (up, to the renderer) is down.
                This rotates the renderer's frame back onto the optical one:
-               sensor +X to optical +Z, +Y to -X, +Z to -Y. The frame_id below
-               stays camera_optical_link, which is what apriltag needs. -->
+               sensor +X to optical +Z, +Y to -X, +Z to -Y. -->
           <pose>0 0 0 1.5708 -1.5708 0</pose>
           <camera>
             <!-- ~74 deg, approximating the EP's real stream. Gazebo derives
@@ -108,9 +106,8 @@
         </sensor>
       </gazebo>
 
-      <!-- Dashboard top-down: follows the chassis from above. Pixels only —
-           no optical TF / apriltag use. Gazebo looks along +X, so pitch -90
-           aims the sensor at the floor. -->
+      <!-- Dashboard top-down: follows the chassis from above. Pixels only.
+           Gazebo looks along +X, so pitch -90 aims the sensor at the floor. -->
       <link name="${tf_prefix}overview_camera_link">
         <inertial>
           <origin xyz="0 0 0" rpy="0 0 0" />
