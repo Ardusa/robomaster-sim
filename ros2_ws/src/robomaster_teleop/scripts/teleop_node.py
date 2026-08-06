@@ -82,7 +82,7 @@ SPEED_BINDINGS = {
 
 # Keep in sync with robomaster_arm/scripts/arm_kinematics.py PRESETS.
 PRESETS = {
-    "preset_tuck": (-0.10, 0.16),
+    "preset_tuck": (-0.15, 0.08),
     "preset_extend": (0.105, 0.142),
 }
 

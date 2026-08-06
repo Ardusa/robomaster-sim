@@ -167,9 +167,9 @@ export function createRobot3d(container, { loadingEl, resetBtn } = {}) {
       if (joints[name] == null) continue;
       setJoint(name, joints[name]);
     }
-    // Right finger is commanded as -left; synthesize if joint_states omit it.
+    // Opposite URDF axes, same command value; synthesize if states omit it.
     if (joints.gripper_m_joint != null && joints.gripper_r_joint == null) {
-      setJoint("gripper_r_joint", -joints.gripper_m_joint);
+      setJoint("gripper_r_joint", joints.gripper_m_joint);
     }
 
     // Keep the robot pinned at the widget origin. Odometry describes travel

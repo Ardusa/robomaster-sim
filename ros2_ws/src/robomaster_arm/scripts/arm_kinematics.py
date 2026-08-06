@@ -35,7 +35,9 @@ GRIPPER_CLOSED = -0.023
 # Named Cartesian presets (metres in arm_base_link: +x forward, +z up).
 # Shared by teleop + dashboard so the buttons mean the same thing everywhere.
 PRESETS = {
-    "tuck": (-0.10, 0.16),  # folded back; needs ARM1_MIN <= -0.70
+    # Shoulder back + elbow folded. (-0.10, 0.16) IK'd to a1≈+0.11 / a2≈-1.34,
+    # which leaves the forearm nearly as open as the home pose.
+    "tuck": (-0.15, 0.08),
     "extend": (0.105, 0.142),  # measured useful forward pose
 }
 

@@ -36,7 +36,7 @@ from robomaster_arm.msg import ArmState, GripperState
 
 # Keep in sync with robomaster_arm/scripts/arm_kinematics.py PRESETS.
 PRESETS = {
-    "tuck": (-0.10, 0.16),
+    "tuck": (-0.15, 0.08),
     "extend": (0.105, 0.142),
 }
 JOG = 0.02
@@ -264,13 +264,30 @@ class DashboardNode(Node):
         fut.add_done_callback(_on_goal)
 
     def _gripper(self, open_cmd: bool) -> None:
-        if not self._set_gripper.wait_for_server(timeout_sec=0.5):
-            self.get_logger().warning("set_gripper action not available")
-            return
+        # Discovery is driven by the asyncio spin_once loop; a short wait here
+        # is only a readiness gate (same pattern as move_arm).
+        if not self._set_gripper.server_is_ready():
+            if not self._set_gripper.wait_for_server(timeout_sec=2.0):
+                self.get_logger().warning("set_gripper action not available")
+                return
         goal = SetGripper.Goal()
         goal.command = SetGripper.Goal.OPEN if open_cmd else SetGripper.Goal.CLOSE
         goal.force_level = 1
-        self._set_gripper.send_goal_async(goal)
+        fut = self._set_gripper.send_goal_async(goal)
+
+        def _on_goal(f) -> None:
+            try:
+                gh = f.result()
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warning(f"gripper send failed: {exc}")
+                return
+            if gh is None or not gh.accepted:
+                self.get_logger().warning("gripper goal rejected")
+
+        fut.add_done_callback(_on_goal)
+        self.get_logger().info(
+            "gripper: " + ("open" if open_cmd else "close")
+        )
 
     def handle_arm(self, action: str) -> None:
         if action == "x+":

@@ -2,14 +2,19 @@ import { createJoystick, applyDeadzone } from "./joystick.js";
 import { createArmPanel } from "./arm.js";
 import { createTelemetry } from "./telemetry.js";
 import { createRobot3d } from "./robot3d.js";
+import { createSnapshotFeed } from "./feeds.js";
 
 (() => {
   const statusEl = document.getElementById("status");
   const modeEl = document.getElementById("mode");
   const primaryTitle = document.getElementById("primary-title");
   const annotatedTitle = document.getElementById("annotated-title");
-  const primaryFeed = document.getElementById("primary-feed");
-  const annotatedFeed = document.getElementById("annotated-feed");
+  const primaryFeed = createSnapshotFeed(document.getElementById("primary-feed"), {
+    hz: 12,
+  });
+  const annotatedFeed = createSnapshotFeed(document.getElementById("annotated-feed"), {
+    hz: 12,
+  });
   const speedEl = document.getElementById("speed");
   const turnEl = document.getElementById("turn");
   const gamepadLabel = document.getElementById("gamepad-label");
@@ -33,11 +38,6 @@ import { createRobot3d } from "./robot3d.js";
     statusEl.textContent = text;
     statusEl.classList.toggle("ok", ok === true);
     statusEl.classList.toggle("bad", ok === false);
-  }
-
-  function streamUrl(base, topic) {
-    // web_video_server validates the raw query value; do not percent-encode '/'.
-    return `${base}/stream?topic=${topic}`;
   }
 
   function send(obj) {
@@ -222,12 +222,14 @@ import { createRobot3d } from "./robot3d.js";
     for (const cam of cams) {
       if (cam.slot === "primary") {
         primaryTitle.textContent = cam.title || "Camera";
-        primaryFeed.src = streamUrl(cfg.video_base, cam.topic);
-        primaryFeed.alt = cam.title || "Primary camera";
+        primaryFeed.start(cfg.video_base, cam.topic, cam.title || "Primary camera");
       } else if (cam.slot === "annotated") {
         annotatedTitle.textContent = cam.title || "Annotated Detections";
-        annotatedFeed.src = streamUrl(cfg.video_base, cam.topic);
-        annotatedFeed.alt = cam.title || "Annotated detections";
+        annotatedFeed.start(
+          cfg.video_base,
+          cam.topic,
+          cam.title || "Annotated detections"
+        );
       }
     }
   }

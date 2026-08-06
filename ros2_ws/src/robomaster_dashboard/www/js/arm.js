@@ -33,7 +33,9 @@ export function createArmPanel({ presetGrid, gotoForm, gotoX, gotoZ, send }) {
   document.querySelectorAll("[data-arm]").forEach((btn) => {
     // Preset buttons are built dynamically; only wire static gripper buttons here.
     if (btn.dataset.arm.startsWith("preset_")) return;
-    btn.addEventListener("click", () => send({ type: "arm", action: btn.dataset.arm }));
+    btn.addEventListener("click", () => {
+      send({ type: "arm", action: btn.dataset.arm });
+    });
   });
 
   return { buildPresets, applyLimits };
