@@ -30,7 +30,7 @@ NAV_ANGULAR_MAX = 0.8
 NAV_POS_TOL = 0.12  # m
 NAV_YAW_TOL = 0.12  # rad (~7 deg)
 NAV_FACE_TOL = 0.15  # rad before starting the drive phase
-NAV_TIMEOUT_SEC = 15.0
+NAV_TIMEOUT_SEC = 30.0
 NAV_RATE_HZ = 20.0
 
 ACTION_SERVER_WAIT_SEC = 5.0

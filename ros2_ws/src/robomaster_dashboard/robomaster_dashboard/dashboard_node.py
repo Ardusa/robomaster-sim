@@ -89,6 +89,7 @@ class DashboardNode(Node):
         self._command_lock = threading.Lock()
         self._arm_deadline = 0.0
         self._last_cmd = 0.0
+        self._deadman_holding = False
         # Not named _clients: rclpy.Node.clients is a generator of service clients.
         self._ws_count = 0
         self._ws_clients: Set[web.WebSocketResponse] = set()
@@ -229,8 +230,15 @@ class DashboardNode(Node):
         with self._lock:
             stale = (time.monotonic() - self._last_cmd) > DEADMAN_SEC
             idle = self._ws_count == 0
-        if stale or idle:
+        if not stale and not idle:
+            # Active teleop — cmd_vel_mux should follow /cmd_vel_teleop.
+            self._deadman_holding = False
+            return
+        # Publish one stop, then go quiet. Re-publishing every tick kept teleop
+        # "active" in cmd_vel_mux (0.5s timeout) and blocked /cmd_vel_autonomy.
+        if not self._deadman_holding:
             self._pub.publish(Twist())
+            self._deadman_holding = True
 
     def _note_cmd(self) -> None:
         with self._lock:
