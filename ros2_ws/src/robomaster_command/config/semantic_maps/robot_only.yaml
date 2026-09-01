@@ -27,3 +27,5 @@ zones:
     x: -2.0
     y: 0.0
     theta: 3.1416
+
+restricted: []

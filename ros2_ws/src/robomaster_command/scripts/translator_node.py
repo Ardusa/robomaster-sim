@@ -56,7 +56,6 @@ def _yaw_from_quat(q) -> float:
 class TranslatorNode(Node):
     def __init__(self) -> None:
         super().__init__("robomaster_command_translator")
-        self.declare_parameter("use_sim_time", False)
         self.declare_parameter("semantic_map_path", "")
 
         self._cb = ReentrantCallbackGroup()
@@ -297,8 +296,13 @@ class TranslatorNode(Node):
             return False, f"step {index}: {label} action server not available"
 
         send_future = client.send_goal_async(goal_msg)
+        rclpy.spin_until_future_complete(
+            self, send_future, timeout_sec=ACTION_SERVER_WAIT_SEC
+        )
+        if not send_future.done():
+            return False, f"step {index}: {label} send timed out"
         try:
-            goal_handle = send_future.result(timeout=ACTION_SERVER_WAIT_SEC)
+            goal_handle = send_future.result()
         except Exception as exc:  # noqa: BLE001
             return False, f"step {index}: {label} send failed: {exc}"
 
@@ -306,8 +310,13 @@ class TranslatorNode(Node):
             return False, f"step {index}: {label} goal rejected"
 
         result_future = goal_handle.get_result_async()
+        rclpy.spin_until_future_complete(
+            self, result_future, timeout_sec=ACTION_RESULT_TIMEOUT_SEC
+        )
+        if not result_future.done():
+            return False, f"step {index}: {label} result timed out"
         try:
-            wrapped = result_future.result(timeout=ACTION_RESULT_TIMEOUT_SEC)
+            wrapped = result_future.result()
         except Exception as exc:  # noqa: BLE001
             return False, f"step {index}: {label} result wait failed: {exc}"
 

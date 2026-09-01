@@ -396,7 +396,14 @@ class DashboardNode(Node):
                 f"{label} not available — is robomaster_command launched?"
             )
         future = client.call_async(request)
-        return future.result(timeout=COMMAND_CALL_TIMEOUT_SEC)
+        deadline = time.monotonic() + COMMAND_CALL_TIMEOUT_SEC
+        while rclpy.ok() and not future.done():
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    f"{label} timed out after {COMMAND_CALL_TIMEOUT_SEC:.0f}s"
+                )
+            time.sleep(0.05)
+        return future.result()
 
     def handle_command(self, text: str) -> None:
         prompt = (text or "").strip()

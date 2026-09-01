@@ -71,7 +71,12 @@ def _nodes(context, *args, **kwargs):
             executable="grounding_node.py",
             name="robomaster_command_grounding",
             output="screen",
-            parameters=[{"use_sim_time": use_sim_time}],
+            parameters=[
+                {
+                    "use_sim_time": use_sim_time,
+                    "semantic_map_path": map_path,
+                }
+            ],
         ),
         Node(
             package="robomaster_command",

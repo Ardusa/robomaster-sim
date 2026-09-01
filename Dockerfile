@@ -7,7 +7,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglib2.0-0 libxcb1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+# PyPI first for deps (flit_core, jinja2, typing-extensions); PyTorch index is extra only.
+# --index-url alone breaks when pip rejects PyTorch-hosted wheels and tries to build from sdist.
+RUN pip3 install --no-cache-dir jinja2 typing-extensions \
+    && pip3 install --no-cache-dir torch torchvision --extra-index-url https://download.pytorch.org/whl/cpu \
     && pip3 install --no-cache-dir ultralytics \
     && python3 -c "from ultralytics import YOLO; YOLO('yolov8n.pt').export(format='onnx', imgsz=320, simplify=True)" \
     && mkdir -p /opt/robomaster/models \

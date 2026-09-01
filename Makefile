@@ -18,7 +18,8 @@ endif
 
 ifeq ($(OS),Windows_NT)
 	PLATFORM      := windows
-	COMPOSE_FILES := -f docker-compose.yml
+	# Same Xvfb/software-GL path as Mac — native Docker has no host display.
+	COMPOSE_FILES := -f docker-compose.yml -f docker-compose.mac.yml
 	HEADLESS := 1
 else ifeq ($(IS_WSL),1)
 	PLATFORM      := wsl2

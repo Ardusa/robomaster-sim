@@ -104,3 +104,8 @@ zones:
     x: 1.5
     y: -3.6
     theta: -1.5708
+
+restricted:
+  - kitchen
+  - kitchen_island
+  - kitchen_counters
