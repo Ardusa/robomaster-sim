@@ -7,7 +7,7 @@
 
     Public API matches the EP text SDK (moveto x/y, gripper open/close). Sim
     runs a serial-equivalent 2R + prismatic model under Fortress; tether talks
-    to the robot through robomaster_driver SDK services on the shared control
+    to the robot through robomaster_tether SDK services on the shared control
     port.
   </description>
   <maintainer email="ardusa05@gmail.com">Ankur</maintainer>
@@ -29,7 +29,7 @@
   <depend>position_controllers</depend>
   <depend>launch</depend>
   <depend>launch_ros</depend>
-  <depend>robomaster_driver</depend>
+  <depend>robomaster_tether</depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>
   <exec_depend>ros2launch</exec_depend>

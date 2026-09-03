@@ -40,7 +40,7 @@ class VideoStream:
     at a time, so:
       arm=True  - standalone: this opens the control port and sends "stream on".
                   Fails if anything else holds it (e.g. a running `make tether`).
-      arm=False - the driver's hardware interface already armed the stream on
+      arm=False - robomaster_tether's hardware interface already armed the stream on
                   the socket it owns; only the video port is touched here.
     """
 
@@ -66,7 +66,7 @@ class VideoStream:
             hint = (
                 ""
                 if self._arm
-                else " Nothing armed the stream: is the driver running with "
+                else " Nothing armed the stream: is robomaster_tether running with "
                 "enable_video true?"
             )
             raise StreamError(

@@ -1,4 +1,4 @@
-#include "robomaster_driver/hardware_interface.hpp"
+#include "robomaster_tether/hardware_interface.hpp"
 
 #include <cmath>
 #include <sstream>
@@ -7,7 +7,7 @@
 #include "pluginlib/class_list_macros.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-namespace robomaster_driver {
+namespace robomaster_tether {
 
 namespace {
 auto get_logger() {
@@ -230,7 +230,7 @@ HardwareInterface::write(const rclcpp::Time & /*time*/,
   return hardware_interface::return_type::OK;
 }
 
-} // namespace robomaster_driver
+} // namespace robomaster_tether
 
-PLUGINLIB_EXPORT_CLASS(robomaster_driver::HardwareInterface,
+PLUGINLIB_EXPORT_CLASS(robomaster_tether::HardwareInterface,
                        hardware_interface::SystemInterface)

@@ -5,9 +5,9 @@
   <version>0.0.1</version>
   <description>Natural-language command grounding and execution for the RoboMaster EP.
 
-    Converts a prompt into an ActionPrimitive sequence, then drives the
-    existing robomaster_arm action servers and drivetrain cmd_vel_autonomy
-    input. Does not talk to hardware directly.
+    Converts a prompt into an ActionPrimitive sequence, then drives Nav2 via
+    robomaster_drivetrain and robomaster_arm action servers. Does not publish
+    cmd_vel directly.
   </description>
   <maintainer email="ardusa05@gmail.com">Ankur</maintainer>
   <license>MIT</license>
@@ -27,6 +27,7 @@
   <exec_depend>rosidl_default_runtime</exec_depend>
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>robomaster_drivetrain</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>robomaster_gazebo</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>

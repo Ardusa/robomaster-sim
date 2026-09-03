@@ -1,4 +1,4 @@
-#include "robomaster_driver/tcp_client.hpp"
+#include "robomaster_tether/tcp_client.hpp"
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -8,7 +8,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-namespace robomaster_driver {
+namespace robomaster_tether {
 
 namespace {
 auto get_logger() { return rclcpp::get_logger("tcp_client"); }
@@ -173,4 +173,4 @@ void TcpClient::drain_responses() {
   drain_responses_unlocked();
 }
 
-} // namespace robomaster_driver
+} // namespace robomaster_tether

@@ -307,6 +307,16 @@ def generate_launch_description():
         parameters=[{"use_sim_time": True}],
     )
 
+    scan_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
+        ],
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+    )
+
     clock_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
@@ -338,6 +348,6 @@ def generate_launch_description():
             clock_bridge,
             # Let Gazebo come up first; the spawn pose comes from the world.
             TimerAction(period=4.0, actions=[OpaqueFunction(function=_spawn)]),
-            TimerAction(period=8.0, actions=[camera_bridge, camera_info_bridge]),
+            TimerAction(period=8.0, actions=[camera_bridge, camera_info_bridge, scan_bridge]),
         ]
     )

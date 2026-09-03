@@ -90,7 +90,7 @@ test-gpu: up ## nvidia-smi inside the container (WSL2 only)
 	$(DC) exec robomaster-sim nvidia-smi
 
 test-connection: build ## Standalone TCP connectivity check against the real robot
-	$(EXEC) "$(SETUP) ros2 run robomaster_driver connection_test"
+	$(EXEC) "$(SETUP) ros2 run robomaster_tether connection_test"
 
 
 # --- ROS2 Bringup -----------------------------------------------------------

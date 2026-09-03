@@ -26,6 +26,7 @@
   <xacro:include filename="intelligent_controller.urdf.xacro" />
   <xacro:include filename="extension.urdf.xacro" />
   <xacro:include filename="tof.urdf.xacro" />
+  <xacro:include filename="lidar.xacro" />
   <xacro:include filename="ros2_control.urdf.xacro" />
 
   <xacro:base tf_prefix="${tf_prefix}" />
@@ -36,6 +37,7 @@
   <xacro:arm tf_prefix="${tf_prefix}"/>
   <xacro:camera tf_prefix="${tf_prefix}" mount="arm" camera_yaw="$(arg camera_yaw)" sim="${_sim}"/>
   <xacro:gripper tf_prefix="${tf_prefix}"/>
+  <xacro:lidar tf_prefix="${tf_prefix}" sim="${_sim}"/>
 
   <xacro:add_tof index="0" tf_prefix="${tf_prefix}" />
   <xacro:add_tof index="1" tf_prefix="${tf_prefix}" />

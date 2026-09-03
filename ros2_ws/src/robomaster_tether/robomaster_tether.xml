@@ -1,6 +1,6 @@
-<library path="robomaster_driver_hw">
-    <class name="robomaster_driver/HardwareInterface"
-        type="robomaster_driver::HardwareInterface"
+<library path="robomaster_tether_hw">
+    <class name="robomaster_tether/HardwareInterface"
+        type="robomaster_tether::HardwareInterface"
         base_class_type="hardware_interface::SystemInterface">
         <description>
             ros2_control SystemInterface for the physical DJI RoboMaster EP,

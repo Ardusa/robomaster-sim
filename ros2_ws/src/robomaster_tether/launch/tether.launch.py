@@ -47,7 +47,7 @@ def _nodes(context, *args, **kwargs):
         # No wheels — still need one TCP owner for arm/gripper (and video).
         actions.append(
             Node(
-                package="robomaster_driver",
+                package="robomaster_tether",
                 executable="sdk_bridge_node",
                 name="robomaster_sdk_bridge",
                 output="screen",

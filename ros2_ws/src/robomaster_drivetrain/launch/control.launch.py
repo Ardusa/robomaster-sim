@@ -58,11 +58,22 @@ def generate_launch_description():
         ],
     )
 
+    # MecanumDriveController publishes odom TF on a namespaced topic; Nav2/AMCL
+    # expect it on /tf.
+    odom_tf_relay = Node(
+        package="robomaster_drivetrain",
+        executable="odom_tf_relay.py",
+        name="odom_tf_relay",
+        output="screen",
+        parameters=[{"use_sim_time": use_sim_time}],
+    )
+
     return LaunchDescription(
         [
             DeclareLaunchArgument("sim", default_value="false", choices=["true", "false"]),
             joint_state_broadcaster_spawner,
             mecanum_drive_controller_spawner,
             cmd_vel_mux,
+            odom_tf_relay,
         ]
     )

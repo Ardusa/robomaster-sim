@@ -1,56 +1,27 @@
 #!/usr/bin/env python3
-"""Execute ActionPrimitive sequences via drivetrain + arm public interfaces."""
+"""Execute ActionPrimitive sequences via drivetrain Nav2 + arm interfaces."""
 
 from __future__ import annotations
 
-import math
 import os
-import threading
 import time
 
 import rclpy
 import yaml
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
 from robomaster_arm.action import MoveArm, SetGripper
 from robomaster_command.msg import ActionPrimitive
 from robomaster_command.srv import ExecuteActionSequence
-
-# Two-phase navigate P-controller (rotate then drive).
-NAV_LINEAR_GAIN = 0.6
-NAV_ANGULAR_GAIN = 1.5
-NAV_LINEAR_MAX = 0.35
-NAV_ANGULAR_MAX = 0.8
-NAV_POS_TOL = 0.12  # m
-NAV_YAW_TOL = 0.12  # rad (~7 deg)
-NAV_FACE_TOL = 0.15  # rad before starting the drive phase
-NAV_TIMEOUT_SEC = 30.0
-NAV_RATE_HZ = 20.0
+from robomaster_drivetrain.srv import GoToPose
 
 ACTION_SERVER_WAIT_SEC = 5.0
 ACTION_RESULT_TIMEOUT_SEC = 30.0
-ODOM_WAIT_SEC = 5.0
-
-
-def _clamp(value: float, limit: float) -> float:
-    return max(-limit, min(limit, value))
-
-
-def _wrap_angle(angle: float) -> float:
-    """Wrap to [-pi, pi] so the rotate phase always takes the short way."""
-    return math.atan2(math.sin(angle), math.cos(angle))
-
-
-def _yaw_from_quat(q) -> float:
-    siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
-    cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
-    return math.atan2(siny_cosp, cosy_cosp)
+NAV_SERVICE_WAIT_SEC = 30.0
+NAV_CALL_TIMEOUT_SEC = 180.0
 
 
 class TranslatorNode(Node):
@@ -59,23 +30,15 @@ class TranslatorNode(Node):
         self.declare_parameter("semantic_map_path", "")
 
         self._cb = ReentrantCallbackGroup()
-        self._odom_lock = threading.Lock()
-        self._odom: dict[str, float] | None = None
-        self._odom_received = False
 
         map_path = self.get_parameter("semantic_map_path").get_parameter_value().string_value
         self._zones = self._load_semantic_map(map_path)
         if self._zones is None:
             return
 
-        self.create_subscription(
-            Odometry,
-            "/mecanum_drive_controller/odometry",
-            self._on_odom,
-            10,
-            callback_group=self._cb,
+        self._go_to_pose = self.create_client(
+            GoToPose, "/go_to_pose/go_to_pose", callback_group=self._cb
         )
-        self._cmd_pub = self.create_publisher(Twist, "/cmd_vel_autonomy", 10)
         self._move_arm = ActionClient(
             self, MoveArm, "/robomaster_arm/move_arm", callback_group=self._cb
         )
@@ -131,65 +94,42 @@ class TranslatorNode(Node):
                     f"semantic map {map_path}: zone {name!r} is invalid: {exc}"
                 )
                 return None
+        self.get_logger().info(
+            f"semantic map loaded from {map_path} (map-frame / world coords)"
+        )
         return zones
 
-    def _on_odom(self, msg: Odometry) -> None:
-        p = msg.pose.pose.position
-        yaw = _yaw_from_quat(msg.pose.pose.orientation)
-        with self._odom_lock:
-            self._odom = {"x": float(p.x), "y": float(p.y), "yaw": float(yaw)}
-            self._odom_received = True
-
-    def _pose(self) -> dict[str, float] | None:
-        with self._odom_lock:
-            return None if self._odom is None else dict(self._odom)
-
-    def _has_odom(self) -> bool:
-        with self._odom_lock:
-            return self._odom_received
-
-    def _stop(self) -> None:
-        self._cmd_pub.publish(Twist())
-
-    def _sleep_until(self, deadline) -> None:
-        """Wait until the node clock reaches deadline, yielding on wall time."""
-        while self.get_clock().now() < deadline:
-            time.sleep(0.005)
-
-    def _wait_for_odom(self, timeout_sec: float) -> bool:
-        if self._has_odom():
-            return True
-        deadline = self.get_clock().now() + Duration(seconds=timeout_sec)
-        while self.get_clock().now() < deadline:
-            if self._has_odom():
-                return True
+    def _call_go_to_pose(self, x: float, y: float, theta: float) -> tuple[bool, str]:
+        if not self._go_to_pose.wait_for_service(timeout_sec=NAV_SERVICE_WAIT_SEC):
+            return False, "go_to_pose not available — is Nav2 launched?"
+        req = GoToPose.Request()
+        req.x = x
+        req.y = y
+        req.theta = theta
+        future = self._go_to_pose.call_async(req)
+        deadline = time.monotonic() + NAV_CALL_TIMEOUT_SEC
+        while rclpy.ok() and not future.done():
+            if time.monotonic() >= deadline:
+                return False, f"navigation timed out after {NAV_CALL_TIMEOUT_SEC:.0f}s"
             time.sleep(0.05)
-        return self._has_odom()
+        res = future.result()
+        if res is None:
+            return False, "go_to_pose returned no response"
+        if not res.success:
+            return False, res.message or "go_to_pose failed"
+        return True, ""
 
     def _on_execute(
         self,
         request: ExecuteActionSequence.Request,
         response: ExecuteActionSequence.Response,
     ) -> ExecuteActionSequence.Response:
-        needs_odom = any(
-            a.type.strip().lower() == "navigate" for a in request.actions
-        )
-        if needs_odom and not self._wait_for_odom(ODOM_WAIT_SEC):
-            response.success = False
-            response.message = (
-                "no odometry on /mecanum_drive_controller/odometry "
-                f"after {ODOM_WAIT_SEC:.0f}s — is the drivetrain up?"
-            )
-            return response
-
         for i, action in enumerate(request.actions):
             ok, message = self._run_action(i, action)
             if not ok:
-                self._stop()
                 response.success = False
                 response.message = message
                 return response
-        self._stop()
         response.success = True
         response.message = f"executed {len(request.actions)} action(s)"
         return response
@@ -237,59 +177,12 @@ class TranslatorNode(Node):
         gx, gy, gtheta = goal
         label = action.target_zone.strip() or f"({gx:.2f},{gy:.2f},{gtheta:.2f})"
         self.get_logger().info(
-            f"navigate to {label} -> ({gx:.2f}, {gy:.2f}, {gtheta:.2f})"
+            f"navigate to {label} -> map ({gx:.2f}, {gy:.2f}, {gtheta:.2f}) via Nav2"
         )
-
-        period = Duration(seconds=1.0 / NAV_RATE_HZ)
-        timeout = Duration(seconds=NAV_TIMEOUT_SEC)
-        start = self.get_clock().now()
-        next_tick = start
-        facing = False
-
-        while (self.get_clock().now() - start) < timeout:
-            pose = self._pose()
-            if pose is None:
-                next_tick += period
-                self._sleep_until(next_tick)
-                continue
-
-            dx = gx - pose["x"]
-            dy = gy - pose["y"]
-            dist = math.hypot(dx, dy)
-            bearing = math.atan2(dy, dx)
-            yaw_err_face = _wrap_angle(bearing - pose["yaw"])
-            yaw_err_goal = _wrap_angle(gtheta - pose["yaw"])
-
-            cmd = Twist()
-            if not facing:
-                if abs(yaw_err_face) < NAV_FACE_TOL or dist < NAV_POS_TOL:
-                    facing = True
-                else:
-                    cmd.angular.z = _clamp(
-                        NAV_ANGULAR_GAIN * yaw_err_face, NAV_ANGULAR_MAX
-                    )
-            elif dist > NAV_POS_TOL:
-                cmd.linear.x = _clamp(NAV_LINEAR_GAIN * dist, NAV_LINEAR_MAX)
-                cmd.angular.z = _clamp(
-                    0.5 * NAV_ANGULAR_GAIN * yaw_err_face, NAV_ANGULAR_MAX
-                )
-            elif abs(yaw_err_goal) > NAV_YAW_TOL:
-                cmd.angular.z = _clamp(
-                    NAV_ANGULAR_GAIN * yaw_err_goal, NAV_ANGULAR_MAX
-                )
-            else:
-                self._stop()
-                return True, ""
-
-            self._cmd_pub.publish(cmd)
-            next_tick += period
-            self._sleep_until(next_tick)
-
-        self._stop()
-        return (
-            False,
-            f"step {index}: navigate to {label} timed out after {NAV_TIMEOUT_SEC:.0f}s",
-        )
+        ok, message = self._call_go_to_pose(gx, gy, gtheta)
+        if not ok:
+            return False, f"step {index}: {message}"
+        return True, ""
 
     def _wait_action_result(self, client, goal_msg, label: str, index: int):
         if not client.wait_for_server(timeout_sec=ACTION_SERVER_WAIT_SEC):

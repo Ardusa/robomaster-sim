@@ -27,7 +27,7 @@ def _nodes(context, *args, **kwargs):
     use_sim_time = sim == "true"
 
     # Required only on the tether path — sim never dials the robot. Fail here
-    # with the reason rather than letting an unset var reach the driver as a
+    # with the reason rather than letting an unset var reach tether as a
     # connection timeout.
     robot_ip = os.environ.get("ROBOMASTER_IP", "")
     if not use_sim_time and not robot_ip:
@@ -53,7 +53,11 @@ def _nodes(context, *args, **kwargs):
         package="robot_state_publisher",
         executable="robot_state_publisher",
         output="screen",
-        parameters=[{"robot_description": robot_description, "use_sim_time": use_sim_time}],
+        parameters=[{
+            "robot_description": robot_description,
+            "use_sim_time": use_sim_time,
+            "publish_frequency": 50.0,
+        }],
     )
 
     actions = [rsp]

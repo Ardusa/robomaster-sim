@@ -7,7 +7,7 @@
     H.264 stream off the SDK's video port into sensor_msgs/Image + CameraInfo.
 
     The real-robot opposite number of robomaster_gazebo's camera sensor, and the
-    producer robomaster_detection consumes. Split out of robomaster_driver
+    producer robomaster_detection consumes. Split out of robomaster_tether
     because that package must be ament_cmake for the C++ hardware plugin, which
     has no console_scripts — this is ament_python, so the node is a real entry
     point instead of a wrapper script.</description>

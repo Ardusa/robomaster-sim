@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(robomaster_driver)
+project(robomaster_tether)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -44,21 +44,21 @@ target_link_libraries(sdk_bridge "${cpp_typesupport_target}")
 
 # --- ros2_control hardware_interface plugin ---
 # Named differently from the rosidl target (${PROJECT_NAME}).
-add_library(robomaster_driver_hw SHARED
+add_library(robomaster_tether_hw SHARED
   src/hardware_interface.cpp
 )
-target_include_directories(robomaster_driver_hw PUBLIC
+target_include_directories(robomaster_tether_hw PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(robomaster_driver_hw tcp_client sdk_bridge)
-ament_target_dependencies(robomaster_driver_hw
+target_link_libraries(robomaster_tether_hw tcp_client sdk_bridge)
+ament_target_dependencies(robomaster_tether_hw
   rclcpp
   rclcpp_lifecycle
   hardware_interface
   pluginlib
 )
-pluginlib_export_plugin_description_file(hardware_interface robomaster_driver.xml)
+pluginlib_export_plugin_description_file(hardware_interface robomaster_tether.xml)
 
 # --- standalone connectivity smoke test (no ROS2 node, no controller_manager) ---
 add_executable(connection_test src/connection_test.cpp)
@@ -70,7 +70,7 @@ target_link_libraries(sdk_bridge_node tcp_client sdk_bridge)
 ament_target_dependencies(sdk_bridge_node rclcpp)
 
 install(
-  TARGETS tcp_client sdk_bridge robomaster_driver_hw
+  TARGETS tcp_client sdk_bridge robomaster_tether_hw
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -79,11 +79,11 @@ install(
 install(TARGETS connection_test sdk_bridge_node DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/ DESTINATION include)
-install(FILES robomaster_driver.xml DESTINATION share/${PROJECT_NAME})
+install(FILES robomaster_tether.xml DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 ament_export_include_directories(include)
-ament_export_libraries(tcp_client sdk_bridge robomaster_driver_hw)
+ament_export_libraries(tcp_client sdk_bridge robomaster_tether_hw)
 ament_export_targets(export_${PROJECT_NAME})
 ament_export_dependencies(rclcpp rclcpp_lifecycle hardware_interface pluginlib)
 ament_export_dependencies(rosidl_default_runtime)

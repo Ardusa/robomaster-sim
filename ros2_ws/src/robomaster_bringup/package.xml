@@ -6,7 +6,7 @@
     <description>Composition-only entry point for the RoboMaster EP.
 
         Starts description plus whichever subsystems you ask for: drivetrain,
-        camera, detection, and exactly one backend (gazebo or driver). Does not
+        camera, detection, and exactly one backend (gazebo or tether). Does not
         implement motion, muxing, or teleop — those live in robomaster_drivetrain
         and robomaster_teleop.
     </description>
@@ -22,7 +22,7 @@
     <exec_depend>robomaster_arm</exec_depend>
     <exec_depend>robomaster_teleop</exec_depend>
     <exec_depend>robomaster_gazebo</exec_depend>
-    <exec_depend>robomaster_driver</exec_depend>
+    <exec_depend>robomaster_tether</exec_depend>
     <exec_depend>robomaster_camera</exec_depend>
     <exec_depend>robomaster_detection</exec_depend>
     <exec_depend>robomaster_dashboard</exec_depend>

@@ -5,8 +5,8 @@ from robomaster_command.msg import ActionPrimitive
 logger = logging.getLogger(__name__)
 
 _FALLBACK_SEQUENCE = [
-    ActionPrimitive(type="navigate", target_zone="hall_console"),
-    ActionPrimitive(type="arm_goto", arm_x=0.15, arm_z=0.10),
+    ActionPrimitive(type="navigate", target_zone="kitchen"),
+    ActionPrimitive(type="arm_goto", arm_x=0.18, arm_z=0.12),
     ActionPrimitive(type="gripper", gripper_open=False),
 ]
 

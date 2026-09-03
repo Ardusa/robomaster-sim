@@ -1,0 +1,34 @@
+digraph G {
+"arm_base_link" -> "arm_1_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"chassis_base_link" -> "arm_base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"arm_1_link" -> "arm_2_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"chassis_base_link" -> "front_left_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"base_link" -> "chassis_base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis_base_link" -> "front_right_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"gripper_link" -> "gripper_m_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"endpoint_bracket_link" -> "gripper_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"gripper_link" -> "gripper_r_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"chassis_base_link" -> "rear_left_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"chassis_base_link" -> "rear_right_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 38.788\nBuffer length: 1.65\nMost recent transform: 18.632\nOldest transform: 16.982\n"];
+"arm_2_link" -> "camera_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_link" -> "camera_optical_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"endpoint_bracket_link" -> "end_point_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"arm_2_link" -> "endpoint_bracket_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis_base_link" -> "extension_base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis_base_link" -> "front_hit_sensor_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"front_hit_sensor_link" -> "front_led_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"gripper_link" -> "gripper_t_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis_base_link" -> "intelligent_controller_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"base_link" -> "laser_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis_base_link" -> "left_hit_sensor_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"left_hit_sensor_link" -> "left_led_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"base_link" -> "overview_camera_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis_base_link" -> "rear_hit_sensor_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"rear_hit_sensor_link" -> "rear_led_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis_base_link" -> "right_hit_sensor_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"right_hit_sensor_link" -> "right_led_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1788303657.683252"[ shape=plaintext ] ;
+}->"base_link";
+}

@@ -1,8 +1,8 @@
 """Real-robot camera: H.264 stream -> /camera/image_raw + /camera/camera_info.
 
-Included by tether.launch.py with arm_stream:=false (the driver owns the
+Included by tether.launch.py with arm_stream:=false (robomaster_tether owns the
 control port and arms the stream itself). Run standalone with the default
-arm_stream:=true to get video with no driver — useful for checking the camera
+arm_stream:=true to get video with no tether backend — useful for checking the camera
 or calibrating without driving.
 
 Pair with robomaster_detection's detection.launch.py for object detection.
@@ -29,7 +29,7 @@ def generate_launch_description():
                 "arm_stream",
                 default_value="true",
                 choices=["true", "false"],
-                description="Send 'stream on' from here. False when the driver already did.",
+                description="Send 'stream on' from here. False when robomaster_tether already did.",
             ),
             camera,
         ]

@@ -3,7 +3,7 @@
 # (not model origins — those sit inside collision geometry).
 #
 # SDF anchors:
-#   robot_spawn        0.0  -6.2
+#   robot_spawn        0.0  -6.2  yaw 1.5708
 #   hall_console       0.0  -0.1
 #   coffee_table       4.0   0.2
 #   living_room_sofa   5.6   0.3
@@ -15,6 +15,13 @@
 #   south_bed         -4.8  -3.15
 #   bathroom vanity    1.5  -4.35
 #   bathroom tub       3.35 -3.55
+#
+# spawn: world pose of robot_spawn — zones are stored in world coords but the
+# translator converts them to odom (which starts at the spawn pose).
+spawn:
+  x: 0.0
+  y: -6.2
+  theta: 1.5708
 zones:
   # --- entry / hall ---
   entry_apron:
@@ -106,6 +113,5 @@ zones:
     theta: -1.5708
 
 restricted:
-  - kitchen
   - kitchen_island
   - kitchen_counters

@@ -7,7 +7,7 @@
 // powered on, wrong IP) down to one clear pass/fail.
 //
 // Usage:
-//   ros2 run robomaster_driver connection_test [robot_ip]
+//   ros2 run robomaster_tether connection_test [robot_ip]
 //   (defaults to the IP set in .env)
 //
 // What it does, in order:
@@ -20,7 +20,7 @@
 #include <iostream>
 #include <string>
 
-#include "robomaster_driver/tcp_client.hpp"
+#include "robomaster_tether/tcp_client.hpp"
 
 int main(int  /*argc*/, char ** /*argv*/) {
   // Not std::string x = std::getenv(...): that's UB (a segfault, not an error)
@@ -40,7 +40,7 @@ int main(int  /*argc*/, char ** /*argv*/) {
   std::cout << "  in direct-connection mode (switch on the smart central "
                "control)\n\n";
 
-  robomaster_driver::TcpClient client;
+  robomaster_tether::TcpClient client;
 
   std::cout << "[1/6] connecting + entering SDK mode... ";
   if (!client.connect(robot_ip)) {

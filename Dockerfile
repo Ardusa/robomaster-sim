@@ -34,6 +34,8 @@ RUN apt-get update && apt-get install -y \
     ros-humble-cv-bridge \
     ros-humble-image-transport \
     ros-humble-web-video-server \
+    ros-humble-navigation2 \
+    ros-humble-nav2-bringup \
     python3-colcon-common-extensions \
     python3-aiohttp \
     python3-av \

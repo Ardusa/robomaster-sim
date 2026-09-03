@@ -6,6 +6,10 @@
 # SDF anchors:
 #   robot_spawn  0.0  0.0
 #   ground_plane 20x20 m
+spawn:
+  x: 0.0
+  y: 0.0
+  theta: 0.0
 zones:
   origin:
     x: 0.0

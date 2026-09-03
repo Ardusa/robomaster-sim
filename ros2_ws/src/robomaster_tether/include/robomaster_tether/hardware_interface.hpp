@@ -1,5 +1,5 @@
-#ifndef ROBOMASTER_DRIVER__HARDWARE_INTERFACE_HPP_
-#define ROBOMASTER_DRIVER__HARDWARE_INTERFACE_HPP_
+#ifndef ROBOMASTER_TETHER__HARDWARE_INTERFACE_HPP_
+#define ROBOMASTER_TETHER__HARDWARE_INTERFACE_HPP_
 
 #include <array>
 #include <memory>
@@ -17,10 +17,10 @@
 #include "rclcpp/node.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 
-#include "robomaster_driver/sdk_bridge.hpp"
-#include "robomaster_driver/tcp_client.hpp"
+#include "robomaster_tether/sdk_bridge.hpp"
+#include "robomaster_tether/tcp_client.hpp"
 
-namespace robomaster_driver {
+namespace robomaster_tether {
 
 // ros2_control SystemInterface for the physical DJI RoboMaster EP,
 // talking to the plaintext SDK over TCP. Mirrors gz_ros2_control's
@@ -83,6 +83,6 @@ private:
   std::thread sdk_spin_thread_;
 };
 
-} // namespace robomaster_driver
+} // namespace robomaster_tether
 
-#endif // ROBOMASTER_DRIVER__HARDWARE_INTERFACE_HPP_
+#endif // ROBOMASTER_TETHER__HARDWARE_INTERFACE_HPP_

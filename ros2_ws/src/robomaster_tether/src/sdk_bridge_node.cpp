@@ -7,8 +7,8 @@
 #include <string>
 
 #include "rclcpp/rclcpp.hpp"
-#include "robomaster_driver/sdk_bridge.hpp"
-#include "robomaster_driver/tcp_client.hpp"
+#include "robomaster_tether/sdk_bridge.hpp"
+#include "robomaster_tether/tcp_client.hpp"
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   const int port = node->get_parameter("control_port").as_int();
   const bool enable_video = node->get_parameter("enable_video").as_bool();
 
-  auto client = std::make_unique<robomaster_driver::TcpClient>();
+  auto client = std::make_unique<robomaster_tether::TcpClient>();
   if (!client->connect(robot_ip, port)) {
     RCLCPP_FATAL(node->get_logger(), "failed to connect at %s:%d",
                  robot_ip.c_str(), port);
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  robomaster_driver::SdkBridge bridge(node, client.get());
+  robomaster_tether::SdkBridge bridge(node, client.get());
   RCLCPP_INFO(node->get_logger(), "sdk_bridge owning control port at %s:%d",
               robot_ip.c_str(), port);
 

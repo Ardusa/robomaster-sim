@@ -1,0 +1,7 @@
+# Map-frame navigation goal for Nav2 (same frame as the occupancy grid / semantic map).
+float64 x
+float64 y
+float64 theta
+---
+bool success
+string message

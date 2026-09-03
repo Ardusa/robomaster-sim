@@ -6,9 +6,9 @@ The tether-side counterpart to the Gazebo camera sensor: publishes the same
 work against either backend unchanged.
 
 Someone has to send "stream on" over the control port, which takes one client
-at a time. Under `make tether` the driver owns that socket and arms the stream
+at a time. Under `make tether` robomaster_tether owns that socket and arms the stream
 itself, so this node runs with arm_stream:=false and reads video only. Standalone
-(no driver), it arms the stream itself — see the arm_stream param.
+(no tether backend), it arms the stream itself — see the arm_stream param.
 
 Decoding runs on a background thread: PyAV's decode() blocks, and doing that
 in a timer would stall the executor and stop the node responding to shutdown.
@@ -29,7 +29,7 @@ class CameraNode(Node):
         super().__init__("camera_node")
 
         self.declare_parameter("frame_id", "camera_optical_link")
-        # False when the driver already armed the stream (the tether path).
+        # False when robomaster_tether already armed the stream (the tether path).
         # True to arm it here, which needs the control port to be free.
         self.declare_parameter("arm_stream", True)
         # Intrinsics for the real camera. Defaults are a plausible guess for the

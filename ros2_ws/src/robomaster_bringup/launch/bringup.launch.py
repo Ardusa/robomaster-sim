@@ -21,7 +21,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -82,6 +82,22 @@ def _backends(context, *args, **kwargs):
     if control:
         actions.append(include("robomaster_drivetrain", "control.launch.py"))
 
+    if control and sim == "true":
+        world = LaunchConfiguration("world").perform(context)
+        world_stem = os.path.splitext(os.path.basename(world))[0] if world else "modern_house"
+        actions.append(
+            TimerAction(
+                period=12.0,
+                actions=[
+                    include(
+                        "robomaster_drivetrain",
+                        "navigation.launch.py",
+                        world_stem=world_stem,
+                    )
+                ],
+            )
+        )
+
     if arm:
         actions.append(include("robomaster_arm", "arm.launch.py"))
 
@@ -96,7 +112,7 @@ def _backends(context, *args, **kwargs):
         # Foundational tether: wheels and/or SDK bridge and/or camera.
         actions.append(
             include(
-                "robomaster_driver",
+                "robomaster_tether",
                 "tether.launch.py",
                 control=str(control).lower(),
                 camera=str(camera).lower(),

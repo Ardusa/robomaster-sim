@@ -2,7 +2,7 @@
 """Cartesian arm + gripper action server.
 
 sim=true  -> JointGroupPositionController commands (serial-equivalent URDF)
-sim=false -> robomaster_driver ArmSdk / GripperSdk (shared TCP with wheels)
+sim=false -> robomaster_tether ArmSdk / GripperSdk (shared TCP with wheels)
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from arm_kinematics import (
 )
 from robomaster_arm.action import MoveArm, SetGripper
 from robomaster_arm.msg import ArmState, GripperState
-from robomaster_driver.srv import ArmSdk, GripperSdk
+from robomaster_tether.srv import ArmSdk, GripperSdk
 
 
 class ArmNode(Node):
@@ -86,10 +86,10 @@ class ArmNode(Node):
             self._arm_cmd = None
             self._gripper_cmd = None
             self._arm_cli = self.create_client(
-                ArmSdk, "robomaster_driver/arm_sdk", callback_group=self._cb
+                ArmSdk, "robomaster_tether/arm_sdk", callback_group=self._cb
             )
             self._gripper_cli = self.create_client(
-                GripperSdk, "robomaster_driver/gripper_sdk", callback_group=self._cb
+                GripperSdk, "robomaster_tether/gripper_sdk", callback_group=self._cb
             )
 
         self._move_server = ActionServer(

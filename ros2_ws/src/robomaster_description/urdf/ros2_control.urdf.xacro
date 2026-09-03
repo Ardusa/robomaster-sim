@@ -3,13 +3,13 @@
   The robot's <ros2_control> block, in both flavours. Mutually exclusive:
   emitting both makes controller_manager fight over the same joint names.
 
-  Lives here rather than in robomaster_driver because the plugin is named as a
+  Lives here rather than in robomaster_tether because the plugin is named as a
   string (pluginlib resolves it at runtime), so this costs no dependency —
-  whereas the reverse would make description depend on driver.
+  whereas the reverse would make description depend on tether.
 
   Sim exposes wheels + serial arm + gripper. Tether exposes wheels only; the
   physical arm is driven through the SDK on the same TCP session the hardware
-  interface owns (see robomaster_driver / robomaster_arm).
+  interface owns (see robomaster_tether / robomaster_arm).
 -->
 <robot xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro">
 
@@ -67,7 +67,7 @@
     <xacro:unless value="${sim}">
       <ros2_control name="RobomasterSystem" type="system">
         <hardware>
-          <plugin>robomaster_driver/HardwareInterface</plugin>
+          <plugin>robomaster_tether/HardwareInterface</plugin>
           <param name="robot_ip">${robot_ip}</param>
           <param name="control_port">${control_port}</param>
           <param name="wheel_radius_m">${wheel_radius_m}</param>

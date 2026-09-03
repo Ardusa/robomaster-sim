@@ -1,15 +1,15 @@
-#ifndef ROBOMASTER_DRIVER__SDK_BRIDGE_HPP_
-#define ROBOMASTER_DRIVER__SDK_BRIDGE_HPP_
+#ifndef ROBOMASTER_TETHER__SDK_BRIDGE_HPP_
+#define ROBOMASTER_TETHER__SDK_BRIDGE_HPP_
 
 #include <memory>
 #include <string>
 
 #include "rclcpp/rclcpp.hpp"
-#include "robomaster_driver/srv/arm_sdk.hpp"
-#include "robomaster_driver/srv/gripper_sdk.hpp"
-#include "robomaster_driver/tcp_client.hpp"
+#include "robomaster_tether/srv/arm_sdk.hpp"
+#include "robomaster_tether/srv/gripper_sdk.hpp"
+#include "robomaster_tether/tcp_client.hpp"
 
-namespace robomaster_driver {
+namespace robomaster_tether {
 
 // ROS service facade over a shared TcpClient for robotic_arm / robotic_gripper.
 // Used by HardwareInterface (wheels own the socket) and by the standalone
@@ -31,6 +31,6 @@ private:
   rclcpp::Service<srv::GripperSdk>::SharedPtr gripper_srv_;
 };
 
-} // namespace robomaster_driver
+} // namespace robomaster_tether
 
-#endif // ROBOMASTER_DRIVER__SDK_BRIDGE_HPP_
+#endif // ROBOMASTER_TETHER__SDK_BRIDGE_HPP_

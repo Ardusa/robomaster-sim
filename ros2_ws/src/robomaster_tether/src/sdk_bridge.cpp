@@ -1,17 +1,17 @@
-#include "robomaster_driver/sdk_bridge.hpp"
+#include "robomaster_tether/sdk_bridge.hpp"
 
 #include <sstream>
 
-namespace robomaster_driver {
+namespace robomaster_tether {
 
 SdkBridge::SdkBridge(rclcpp::Node::SharedPtr node, TcpClient *client)
     : client_(client) {
   arm_srv_ = node->create_service<srv::ArmSdk>(
-      "robomaster_driver/arm_sdk",
+      "robomaster_tether/arm_sdk",
       [this](const std::shared_ptr<srv::ArmSdk::Request> req,
              std::shared_ptr<srv::ArmSdk::Response> res) { handle_arm(req, res); });
   gripper_srv_ = node->create_service<srv::GripperSdk>(
-      "robomaster_driver/gripper_sdk",
+      "robomaster_tether/gripper_sdk",
       [this](const std::shared_ptr<srv::GripperSdk::Request> req,
              std::shared_ptr<srv::GripperSdk::Response> res) {
         handle_gripper(req, res);
@@ -116,4 +116,4 @@ void SdkBridge::handle_gripper(
   response->message = reply;
 }
 
-} // namespace robomaster_driver
+} // namespace robomaster_tether

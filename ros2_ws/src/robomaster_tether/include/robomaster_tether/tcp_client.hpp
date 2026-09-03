@@ -1,10 +1,10 @@
-#ifndef ROBOMASTER_DRIVER__TCP_CLIENT_HPP_
-#define ROBOMASTER_DRIVER__TCP_CLIENT_HPP_
+#ifndef ROBOMASTER_TETHER__TCP_CLIENT_HPP_
+#define ROBOMASTER_TETHER__TCP_CLIENT_HPP_
 
 #include <mutex>
 #include <string>
 
-namespace robomaster_driver {
+namespace robomaster_tether {
 
 // Thin wrapper around the DJI RoboMaster plaintext SDK control-command
 // socket (TCP port 40923). One instance owns one control-command
@@ -69,6 +69,6 @@ private:
       send_mutex_; // serializes writers; recv is single-threaded by design
 };
 
-} // namespace robomaster_driver
+} // namespace robomaster_tether
 
-#endif // ROBOMASTER_DRIVER__TCP_CLIENT_HPP_
+#endif // ROBOMASTER_TETHER__TCP_CLIENT_HPP_
